@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "inlineSourceMap": true,
+        "strict": true,
+        "outDir": "../build/front",
+        "noImplicitAny": true,
+        "esModuleInterop": true,
+        "strictPropertyInitialization": false,
+        "lib": ["esnext", "dom", "scripthost"]
+    },
+    "include": ["src/**/*", "../../types/*"]
+}
