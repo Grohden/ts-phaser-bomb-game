@@ -4,7 +4,6 @@
         "module": "commonjs",
         "inlineSourceMap": true,
         "strict": true,
-        "outDir": "../build/front",
         "noImplicitAny": true,
         "esModuleInterop": true,
         "strictPropertyInitialization": false,

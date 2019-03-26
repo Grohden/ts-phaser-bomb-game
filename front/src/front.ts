@@ -65,7 +65,7 @@ function preload(this: Phaser.Scene) {
     this.load.spritesheet(ASSETS.PLAYER,
         'assets/dude.png', {
             frameWidth: 32,
-            frameHeight: 32
+            frameHeight: 48
         }
     );
 }
