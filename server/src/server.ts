@@ -1,7 +1,12 @@
+import { GamePlayer } from '../../app-defs/index'
 import express from 'express';
 import http from 'http';
 import path from 'path';
 import socketIO from 'socket.io';
+
+interface BackendState {
+    players: { [id: string]: GamePlayer };
+}
 
 const SocketEvents = {
     Movement: 'MOVEMENT',

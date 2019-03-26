@@ -1,7 +1,17 @@
+import {PlayerDirections} from './../../app-defs/index';
 import io from 'socket.io-client';
 import { GameObjects, Game } from 'phaser';
 
 const socket = io();
+
+interface FrontEndState {
+    playerRegistry: {
+        [id: string]: {
+            directions: PlayerDirections,
+            player: Phaser.Physics.Arcade.Sprite
+        }
+    };
+}
 
 const EVENTS = {
     NEW_PLAYER: 'new player',

@@ -7,7 +7,10 @@
         "noImplicitAny": true,
         "esModuleInterop": true,
         "strictPropertyInitialization": false,
-        "lib": ["esnext", "dom", "scripthost"]
+        "lib": ["esnext", "dom", "scripthost"],
+        "typeRoots": [
+            "../*.d.ts"
+        ]
     },
-    "include": ["src/**/*", "../../types/*"]
+    "include": ["src/**/*"]
 }

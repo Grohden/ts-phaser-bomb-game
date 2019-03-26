@@ -8,7 +8,10 @@
         "noImplicitAny": true,
         "esModuleInterop": true,
         "strictPropertyInitialization": false,
-        "lib": ["esnext"]
+        "lib": ["esnext"],
+        "typeRoots": [
+            "../*.d.ts"
+        ]
     },
     "include": ["src/**/*"]
 }

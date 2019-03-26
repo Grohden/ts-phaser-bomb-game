@@ -1,4 +1,4 @@
-declare interface PlayerDirections {
+export interface PlayerDirections {
     up: boolean,
     down: boolean,
     left: boolean,
@@ -7,19 +7,17 @@ declare interface PlayerDirections {
     y: number
 }
 
-interface FrontEndState {
-    playerRegistry: {
-        [id: string]: {
-            directions: PlayerDirections,
-            player: Phaser.Physics.Arcade.Sprite
-        }
-    };
-}
-
-declare enum SocketEvents {
+export enum SocketEvents {
     Connection = 'connection',
     Movement = 'MOVEMENT',
     NewPlayer = 'NEW_PLAYER',
     Disconnect = 'DISCONNECT',
     StateChange = 'STATE_CHANGE'
+}    
+
+
+export interface GamePlayer {
+    id: String,
+    x: number,
+    y: number
 }
