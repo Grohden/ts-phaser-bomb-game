@@ -3,7 +3,7 @@
   "compilerOptions": {
     "target": "es6",
     "module": "commonjs",
-    "inlineSourceMap": true,
+    "sourceMap": true,
     "lib": [
       "esnext",
       "dom",

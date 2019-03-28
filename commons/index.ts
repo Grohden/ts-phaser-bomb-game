@@ -1,5 +1,14 @@
 export const SOCKET_UPDATE_INTERVAL = 1000 / 60;
 
+export const GameDimensions = {
+    gameWidth: 540,
+    gameHeight: 540,
+    playerWidth: 32,
+    playerHeight: 48,
+    tileWidth: 36,
+    tileHeight: 36
+};
+
 export interface PlayerDirections {
     up: boolean,
     down: boolean,
@@ -13,12 +22,14 @@ export const enum SocketEvents {
     Movement = 'movement',
     NewPlayer = 'new_player',
     Disconnect = 'disconnect',
-    StateChange = 'state_change'
+    StateUpdate = 'state_change'
 }
 
 
-export interface GamePlayer {
-    id: String,
-    x: number,
-    y: number
+export interface BackendState {
+    playerRegistry: {
+        [id: string]: {
+            directions: PlayerDirections
+        }
+    };
 }

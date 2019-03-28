@@ -1,12 +1,9 @@
-import {GamePlayer, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons'
+import {BackendState, PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons'
 import express from 'express'
 import http from 'http'
 import path from 'path'
 import socketIO from 'socket.io'
 
-interface BackendState {
-    players: { [id: string]: GamePlayer };
-}
 
 const app = express();
 const server = new http.Server(app);
@@ -28,29 +25,39 @@ server.listen(5000, function () {
     console.log('Starting server on port 5000');
 });
 
+
 const state: BackendState = {
-    players: {}
+    playerRegistry: {}
 };
 
 io.on('connection', function (socket) {
     socket.on(SocketEvents.NewPlayer, () => {
-        state.players[socket.id] = {
-            id: socket.id,
-            x: 100,
-            y: 100
+        state.playerRegistry[socket.id] = {
+            directions: {
+                down: false,
+                left: false,
+                right: false,
+                up: false,
+                x: 0,
+                y: 0
+            }
         };
     });
-    socket.on(SocketEvents.Movement, (data: GamePlayer) => {
-        state.players[socket.id] = data
+
+    socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
+        const player = state.playerRegistry[socket.id];
+        if (player) {
+            player.directions = directions
+        }
     });
 
     socket.on(SocketEvents.Disconnect, () => {
-        if (socket.id in state.players) {
-            delete state.players[socket.id]
+        if (socket.id in state.playerRegistry) {
+            delete state.playerRegistry[socket.id]
         }
     });
 });
 
 setInterval(function () {
-    io.sockets.emit(SocketEvents.StateChange, state.players);
+    io.sockets.emit(SocketEvents.StateUpdate, state);
 }, SOCKET_UPDATE_INTERVAL);

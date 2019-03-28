@@ -1,4 +1,4 @@
-import {PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons';
+import {BackendState, GameDimensions, PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons';
 import io from 'socket.io-client';
 import Phaser from 'phaser';
 
@@ -25,19 +25,10 @@ const MAPS = {
     WALLS: 'WALLS'
 };
 
-const defaultDirections: PlayerDirections = {
-    up: false,
-    down: false,
-    left: false,
-    right: false,
-    x: 100,
-    y: 100
-};
-
 const config: GameConfig = {
     type: Phaser.AUTO,
-    width: 540,
-    height: 540,
+    width: GameDimensions.gameWidth,
+    height: GameDimensions.gameHeight,
     physics: {
         default: 'arcade',
         arcade: {
@@ -66,17 +57,24 @@ function preload(this: Phaser.Scene) {
     this.load.tilemapCSV(MAPS.BREAKABLES, 'assets/map_breakables.csv');
     this.load.spritesheet(ASSETS.PLAYER,
         'assets/dude.png', {
-            frameWidth: 32,
-            frameHeight: 48
+            frameWidth: GameDimensions.playerWidth,
+            frameHeight: GameDimensions.playerHeight
         }
     );
 }
 
 function fabricPlayer(
     context: Phaser.Scene,
+    directions: PlayerDirections,
     collisions: Array<Phaser.GameObjects.GameObject>
 ): Phaser.Physics.Arcade.Sprite {
-    const player = context.physics.add.sprite(5, 5, ASSETS.PLAYER, 1);
+    const player = context.physics.add.sprite(
+        directions.x,
+        directions.y,
+        ASSETS.PLAYER,
+        1
+    );
+
     player.setBounce(0.9);
     player.setCollideWorldBounds(true);
 
@@ -89,8 +87,8 @@ function fabricPlayer(
 function makeDefaultTileMap(context: Phaser.Scene, key: string) {
     return context.make.tilemap({
         key,
-        tileWidth: 36,
-        tileHeight: 36
+        tileWidth: GameDimensions.tileWidth,
+        tileHeight: GameDimensions.tileHeight
     });
 }
 
@@ -116,23 +114,22 @@ function create(this: Phaser.Scene) {
 
     const playerCollisions = [breakableLayer, wallsLayer];
 
-    state.playerRegistry[socket.id] = {
-        directions: defaultDirections,
-        player: fabricPlayer(context, playerCollisions)
-    };
-
     socket.emit(SocketEvents.NewPlayer);
-    socket.on(SocketEvents.StateChange, (players: { [id: string]: PlayerDirections }) => {
-        for (const [id, data] of Object.entries(players)) {
+    socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
+        for (const [id, data] of Object.entries(backState.playerRegistry)) {
             const {playerRegistry} = state;
             if (!(id in playerRegistry)) {
                 playerRegistry[id] = {
-                    directions: data,
-                    player: fabricPlayer(context, playerCollisions)
+                    directions: data.directions,
+                    player: fabricPlayer(
+                        context,
+                        data.directions,
+                        playerCollisions
+                    )
                 }
             } else {
                 if (socket.id !== id) {
-                    playerRegistry[id].directions = data
+                    playerRegistry[id].directions = data.directions
                 }
             }
         }
@@ -243,7 +240,14 @@ function update(this: Phaser.Scene) {
     }
 }
 
+socket.on(SocketEvents.Disconnect, () => {
+    delete state.playerRegistry[socket.id]
+});
 
+// Movement updates
 setInterval(function () {
-    socket.emit(SocketEvents.Movement, defaultDirections);
+    const player = state.playerRegistry[socket.id];
+    if (player) {
+        socket.emit(SocketEvents.Movement, player.directions);
+    }
 }, SOCKET_UPDATE_INTERVAL);
