@@ -4,19 +4,19 @@ module.exports = {
     entry: './src/front.ts',
     mode: 'development',
     module: {
-      rules: [
-        {
-          test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
-        }
-      ]
+        rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/
+            }
+        ]
     },
     resolve: {
-      extensions: [ '.ts', '.js' ]
+        extensions: ['.ts', '.js']
     },
     output: {
-      filename: 'index.js',
-      path: path.resolve(__dirname, '../server/build/static')
+        filename: 'index.js',
+        path: path.resolve(__dirname, '../server/build/static')
     }
-  };
+};

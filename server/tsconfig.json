@@ -1,17 +1,14 @@
 {
-    "compilerOptions": {
-        "target": "es2018",
-        "module": "commonjs",
-        "inlineSourceMap": true,
-        "strict": true,
-        "outDir": "./build/",
-        "noImplicitAny": true,
-        "esModuleInterop": true,
-        "strictPropertyInitialization": false,
-        "lib": ["esnext"],
-        "typeRoots": [
-            "../*.d.ts"
-        ]
-    },
-    "include": ["src/**/*"]
+  "extends": "../tsconfig",
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "outDir": "./build/",
+    "lib": [
+      "esnext"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

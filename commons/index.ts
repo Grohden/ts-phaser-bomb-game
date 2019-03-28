@@ -1,3 +1,5 @@
+export const SOCKET_UPDATE_INTERVAL = 1000 / 60;
+
 export interface PlayerDirections {
     up: boolean,
     down: boolean,
@@ -7,13 +9,12 @@ export interface PlayerDirections {
     y: number
 }
 
-export enum SocketEvents {
-    Connection = 'connection',
-    Movement = 'MOVEMENT',
-    NewPlayer = 'NEW_PLAYER',
-    Disconnect = 'DISCONNECT',
-    StateChange = 'STATE_CHANGE'
-}    
+export const enum SocketEvents {
+    Movement = 'movement',
+    NewPlayer = 'new_player',
+    Disconnect = 'disconnect',
+    StateChange = 'state_change'
+}
 
 
 export interface GamePlayer {

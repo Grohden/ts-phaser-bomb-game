@@ -1,6 +1,6 @@
-import {PlayerDirections} from './../../app-defs/index';
+import {PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from '../../commons';
 import io from 'socket.io-client';
-import { GameObjects, Game } from 'phaser';
+import {GameObjects} from 'phaser';
 
 const socket = io();
 
@@ -13,17 +13,11 @@ interface FrontEndState {
     };
 }
 
-const EVENTS = {
-    NEW_PLAYER: 'new player',
-    MOVEMENT: 'movement',
-    STATE: 'state'
-}
-
-const MAIN_TILES = 'MAIN_TILES'
+const MAIN_TILES = 'MAIN_TILES';
 
 const ASSETS = {
     PLAYER: 'dude'
-}
+};
 
 const MAPS = {
     BREAKABLES: 'BREAKABLES',
@@ -38,7 +32,7 @@ const defaultDirections: PlayerDirections = {
     right: false,
     x: 100,
     y: 100
-}
+};
 
 const config: GameConfig = {
     type: Phaser.AUTO,
@@ -62,7 +56,7 @@ const game = new Phaser.Game(config);
 
 const state: FrontEndState = {
     playerRegistry: {}
-}
+};
 
 function preload(this: Phaser.Scene) {
     // Map
@@ -70,8 +64,6 @@ function preload(this: Phaser.Scene) {
     this.load.tilemapCSV(MAPS.BACKGROUND, 'assets/map_background.csv');
     this.load.tilemapCSV(MAPS.WALLS, 'assets/map_walls.csv');
     this.load.tilemapCSV(MAPS.BREAKABLES, 'assets/map_breakables.csv');
-
-    this.load.image('ground', 'assets/ground.png');
     this.load.spritesheet(ASSETS.PLAYER,
         'assets/dude.png', {
             frameWidth: 32,
@@ -103,36 +95,36 @@ function makeDefaultTileMap(context: Phaser.Scene, key: string) {
 }
 
 function create(this: Phaser.Scene) {
-    const context = this
+    const context = this;
 
     // Background
-    const backgroundMap = makeDefaultTileMap(this, MAPS.BACKGROUND)
-    const backgroundTileset = backgroundMap.addTilesetImage(MAIN_TILES);
-    backgroundMap.createStaticLayer(0, backgroundTileset, 0, 0);
+    const backgroundMap = makeDefaultTileMap(this, MAPS.BACKGROUND);
+    const backgroundTileSet = backgroundMap.addTilesetImage(MAIN_TILES);
+    backgroundMap.createStaticLayer(0, backgroundTileSet, 0, 0);
 
     // Breakables
-    const wallsMap = makeDefaultTileMap(this, MAPS.WALLS)
-    const wallsTileset = wallsMap.addTilesetImage(MAIN_TILES);
-    const wallsLayer = wallsMap.createStaticLayer(0, wallsTileset, 0, 0);
+    const wallsMap = makeDefaultTileMap(this, MAPS.WALLS);
+    const wallsTileSet = wallsMap.addTilesetImage(MAIN_TILES);
+    const wallsLayer = wallsMap.createStaticLayer(0, wallsTileSet, 0, 0);
     wallsMap.setCollisionBetween(0, 2);
 
     // Breakables
-    const breakablesMap = makeDefaultTileMap(this, MAPS.BREAKABLES)
-    const breakableTileset = breakablesMap.addTilesetImage(MAIN_TILES);
-    const breakableLayer = breakablesMap.createStaticLayer(0, breakableTileset, 0, 0);
+    const breakablesMap = makeDefaultTileMap(this, MAPS.BREAKABLES);
+    const breakableTileSet = breakablesMap.addTilesetImage(MAIN_TILES);
+    const breakableLayer = breakablesMap.createStaticLayer(0, breakableTileSet, 0, 0);
     breakablesMap.setCollisionBetween(0, 2);
 
-    const playerCollisions = [breakableLayer, wallsLayer]
+    const playerCollisions = [breakableLayer, wallsLayer];
 
     state.playerRegistry[socket.id] = {
         directions: defaultDirections,
         player: fabricPlayer(context, playerCollisions)
-    }
+    };
 
-    socket.emit(EVENTS.NEW_PLAYER);
-    socket.on(EVENTS.STATE, (players: { [id: string]: PlayerDirections }) => {
+    socket.emit(SocketEvents.NewPlayer);
+    socket.on(SocketEvents.StateChange, (players: { [id: string]: PlayerDirections }) => {
         for (const [id, data] of Object.entries(players)) {
-            const { playerRegistry } = state
+            const {playerRegistry} = state;
             if (!(id in playerRegistry)) {
                 playerRegistry[id] = {
                     directions: data,
@@ -183,10 +175,10 @@ interface Directions {
     up: boolean
 }
 
-function applyPhisicsAndAnimations(
+function applyPhysicsAndAnimations(
     sprite: Phaser.Physics.Arcade.Sprite,
-    { left, right, down, up }: Directions) {
-    const velocity = 160
+    {left, right, down, up}: Directions) {
+    const velocity = 160;
     if (left) {
         sprite.setVelocityX(-velocity);
         sprite.anims.play('left', true);
@@ -207,13 +199,13 @@ function applyPhisicsAndAnimations(
     }
 }
 
-function inRange({ min, max, value }: { min: number, max: number, value: number }) {
+function inRange({min, max, value}: { min: number, max: number, value: number }) {
     return value >= min && value <= max
 }
 
 function update(this: Phaser.Scene) {
     for (const [id, registry] of Object.entries(state.playerRegistry)) {
-        const { player, directions } = registry
+        const {player, directions} = registry;
 
         if (socket.id === id) {
             const cursors = this.input.keyboard.createCursorKeys();
@@ -224,27 +216,28 @@ function update(this: Phaser.Scene) {
                 up: cursors.down!.isDown,
                 x: player.x,
                 y: player.y
-            })
-            applyPhisicsAndAnimations(player, directions)
+            });
+            applyPhysicsAndAnimations(player, directions)
         } else {
-            const tolerance = 10
+            // Fixes some position imprecision (from player animations)
+            const tolerance = 10;
             const isXOk = inRange({
                 min: directions.x - tolerance,
                 max: directions.x + tolerance,
                 value: player.x
-            })
+            });
             const isYOk = inRange({
                 min: directions.y - tolerance,
                 max: directions.y + tolerance,
                 value: player.y
-            })
+            });
 
 
             if (!isXOk || !isYOk) {
-                player.x = directions.x
+                player.x = directions.x;
                 player.y = directions.y
             } else {
-                applyPhisicsAndAnimations(player, directions)
+                applyPhysicsAndAnimations(player, directions)
             }
         }
     }
@@ -252,5 +245,5 @@ function update(this: Phaser.Scene) {
 
 
 setInterval(function () {
-    socket.emit(EVENTS.MOVEMENT, defaultDirections);
-}, 1000 / 60);
+    socket.emit(SocketEvents.Movement, defaultDirections);
+}, SOCKET_UPDATE_INTERVAL);

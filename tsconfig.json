@@ -1,11 +1,18 @@
 {
-    "compilerOptions": {
-        "inlineSourceMap": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "esModuleInterop": true,
-        "strictPropertyInitialization": false,
-        "lib": ["esnext"]
-    },
-    "include": ["src/**/*"]
+  "compilerOptions": {
+    "inlineSourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "strictPropertyInitialization": false,
+    "lib": [
+      "esnext"
+    ],
+    "typeRoots": [
+      "./commons/*.ts"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

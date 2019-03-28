@@ -1,16 +1,16 @@
 {
-    "compilerOptions": {
-        "target": "es6",
-        "module": "commonjs",
-        "inlineSourceMap": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "esModuleInterop": true,
-        "strictPropertyInitialization": false,
-        "lib": ["esnext", "dom", "scripthost"],
-        "typeRoots": [
-            "../*.d.ts"
-        ]
-    },
-    "include": ["src/**/*"]
+  "extends": "../tsconfig",
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "inlineSourceMap": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "scripthost"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

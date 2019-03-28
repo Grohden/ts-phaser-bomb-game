@@ -1,21 +1,13 @@
-import { GamePlayer } from '../../app-defs/index'
-import express from 'express';
-import http from 'http';
-import path from 'path';
-import socketIO from 'socket.io';
+import {GamePlayer, SOCKET_UPDATE_INTERVAL, SocketEvents} from '../../commons'
+import express from 'express'
+import http from 'http'
+import path from 'path'
+import socketIO from 'socket.io'
 
 interface BackendState {
     players: { [id: string]: GamePlayer };
 }
 
-const SocketEvents = {
-    Movement: 'MOVEMENT',
-    NewPlayer: 'NEW_PLAYER',
-    Disconnect: 'DISCONNECT',
-    StateChange: 'STATE_CHANGE'
-}
-
-const SOCKET_UPDATE_INTERVAL = 1000 / 60;
 const app = express();
 const server = new http.Server(app);
 const io = socketIO(server);
