@@ -5,6 +5,8 @@
     "lerna": "^3.13.1"
   },
   "scripts": {
+    "bootstrap": "lerna bootstrap --hoist",
+    "build": "lerna run build --stream",
     "start": "node ./server/build/server.js"
   }
 }
