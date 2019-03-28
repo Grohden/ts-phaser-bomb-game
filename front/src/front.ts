@@ -1,6 +1,6 @@
-import {PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from '../../commons';
+import {PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons';
 import io from 'socket.io-client';
-import {GameObjects} from 'phaser';
+import Phaser from 'phaser';
 
 const socket = io();
 
@@ -46,9 +46,9 @@ const config: GameConfig = {
         }
     },
     scene: {
-        preload: preload,
-        create: create,
-        update: update
+        preload,
+        create,
+        update
     }
 };
 
@@ -74,7 +74,7 @@ function preload(this: Phaser.Scene) {
 
 function fabricPlayer(
     context: Phaser.Scene,
-    collisions: Array<GameObjects.GameObject>
+    collisions: Array<Phaser.GameObjects.GameObject>
 ): Phaser.Physics.Arcade.Sprite {
     const player = context.physics.add.sprite(5, 5, ASSETS.PLAYER, 1);
     player.setBounce(0.9);

@@ -1,7 +1,8 @@
 {
   "packages": [
     "front/**",
-    "server/**"
+    "server/**",
+    "commons/**"
   ],
   "version": "0.0.1"
 }

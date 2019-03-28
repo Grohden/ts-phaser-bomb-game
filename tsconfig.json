@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "inlineSourceMap": true,
     "strict": true,
     "noImplicitAny": true,
     "esModuleInterop": true,
@@ -11,8 +10,5 @@
     "typeRoots": [
       "./commons/*.ts"
     ]
-  },
-  "include": [
-    "src/**/*"
-  ]
+  }
 }
