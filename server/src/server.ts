@@ -55,6 +55,8 @@ io.on('connection', function (socket) {
         if (socket.id in state.playerRegistry) {
             delete state.playerRegistry[socket.id]
         }
+
+        io.sockets.emit(SocketEvents.PlayerDisconnect, socket.id)
     });
 });
 

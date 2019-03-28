@@ -22,6 +22,7 @@ export const enum SocketEvents {
     Movement = 'movement',
     NewPlayer = 'new_player',
     Disconnect = 'disconnect',
+    PlayerDisconnect = 'player_disconnect',
     StateUpdate = 'state_change'
 }
 

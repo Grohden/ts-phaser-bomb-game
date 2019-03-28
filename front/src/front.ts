@@ -240,8 +240,12 @@ function update(this: Phaser.Scene) {
     }
 }
 
-socket.on(SocketEvents.Disconnect, () => {
-    delete state.playerRegistry[socket.id]
+socket.on(SocketEvents.PlayerDisconnect, (playerId: string) => {
+    const registry = state.playerRegistry[playerId];
+    if (registry) {
+        registry.player.destroy(true);
+        delete state.playerRegistry[playerId]
+    }
 });
 
 // Movement updates
