@@ -22,6 +22,7 @@ app.get('/', function (request, response) {
 
 // Starts the server.
 server.listen(5000, function () {
+    console.log("Address", server.address());
     console.log('Starting server on port 5000');
 });
 

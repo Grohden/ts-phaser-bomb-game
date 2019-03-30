@@ -10,18 +10,22 @@ interface Directions {
     up: boolean
 }
 
+interface SceneMap {
+    map: Phaser.Tilemaps.Tilemap,
+    tiles: Phaser.Tilemaps.Tileset,
+    layer: Phaser.Tilemaps.DynamicTilemapLayer
+}
+
 function inRange({min, max, value}: { min: number, max: number, value: number }) {
     return value >= min && value <= max
 }
 
-function delegateContext<T>(receiver: (ctx: T) => any) {
-    return function (this: T) {
-        receiver(this);
-    }
-}
-
 export class BombGame {
     private socket: Socket;
+    private backgroundMap: SceneMap;
+    private breakableMap: SceneMap;
+    private wallsMap: SceneMap;
+
     private playerRegistry: {
         [id: string]: {
             directions: PlayerDirections,
@@ -32,6 +36,26 @@ export class BombGame {
     constructor(socket: Socket) {
         this.socket = socket
     }
+
+    private static makeDefaultTileMap(
+        scene: Phaser.Scene,
+        key: string,
+        imageName: string
+    ): SceneMap {
+        const map = scene.make.tilemap({
+            key,
+            tileWidth: GameDimensions.tileWidth,
+            tileHeight: GameDimensions.tileHeight
+        });
+
+        const tiles = map.addTilesetImage(imageName);
+        const layer = map.createDynamicLayer(0, tiles, 0, 0);
+
+        return {
+            layer, map, tiles
+        }
+    }
+
 
     private static preload(scene: Phaser.Scene) {
         scene.load.image(MAIN_TILES, 'assets/tileset.png');
@@ -48,7 +72,8 @@ export class BombGame {
 
     private static applyPhysicsAndAnimations(
         sprite: Phaser.Physics.Arcade.Sprite,
-        {left, right, down, up}: Directions) {
+        {left, right, down, up}: Directions
+    ) {
         const velocity = 160;
         if (left) {
             sprite.setVelocityX(-velocity);
@@ -70,35 +95,6 @@ export class BombGame {
         }
     }
 
-    private static makeDefaultTileMap(scene: Phaser.Scene, key: string) {
-        return scene.make.tilemap({
-            key,
-            tileWidth: GameDimensions.tileWidth,
-            tileHeight: GameDimensions.tileHeight
-        });
-    }
-
-    private static fabricPlayer(
-        scene: Phaser.Scene,
-        directions: PlayerDirections,
-        collisions: Array<Phaser.GameObjects.GameObject>
-    ): Phaser.Physics.Arcade.Sprite {
-        const player = scene.physics.add.sprite(
-            directions.x,
-            directions.y,
-            ASSETS.PLAYER,
-            1
-        );
-
-        player.setBounce(0.9);
-        player.setCollideWorldBounds(true);
-
-        collisions.forEach(layer => {
-            scene.physics.add.collider(player, layer);
-        });
-        return player
-    }
-
     startGame() {
         const self = this;
 
@@ -110,7 +106,7 @@ export class BombGame {
                 default: 'arcade',
                 arcade: {
                     gravity: {},
-                    debug: false
+                    debug: true
                 }
             },
             scene: {
@@ -136,26 +132,64 @@ export class BombGame {
         });
     }
 
-    private create(scene: Phaser.Scene) {
-
+    private makeMaps(scene: Phaser.Scene) {
         // Background
-        const backgroundMap = BombGame.makeDefaultTileMap(scene, MAPS.BACKGROUND);
-        const backgroundTileSet = backgroundMap.addTilesetImage(MAIN_TILES);
-        backgroundMap.createStaticLayer(0, backgroundTileSet, 0, 0);
+        this.backgroundMap = BombGame.makeDefaultTileMap(
+            scene,
+            MAPS.BACKGROUND,
+            MAIN_TILES
+        );
+
+        // Walls
+        this.wallsMap = BombGame.makeDefaultTileMap(scene, MAPS.WALLS, MAIN_TILES);
+        this.wallsMap.map.setCollisionBetween(0, 2);
 
         // Breakables
-        const wallsMap = BombGame.makeDefaultTileMap(scene, MAPS.WALLS);
-        const wallsTileSet = wallsMap.addTilesetImage(MAIN_TILES);
-        const wallsLayer = wallsMap.createStaticLayer(0, wallsTileSet, 0, 0);
-        wallsMap.setCollisionBetween(0, 2);
+        this.breakableMap = BombGame.makeDefaultTileMap(scene, MAPS.BREAKABLES, MAIN_TILES);
+        this.breakableMap.map.setCollisionBetween(0, 2);
+    }
 
-        // Breakables
-        const breakablesMap = BombGame.makeDefaultTileMap(scene, MAPS.BREAKABLES);
-        const breakableTileSet = breakablesMap.addTilesetImage(MAIN_TILES);
-        const breakableLayer = breakablesMap.createStaticLayer(0, breakableTileSet, 0, 0);
-        breakablesMap.setCollisionBetween(0, 2);
+    private fabricPlayer(
+        scene: Phaser.Scene,
+        directions: PlayerDirections,
+        collisions: Array<Phaser.GameObjects.GameObject>
+    ): Phaser.Physics.Arcade.Sprite {
+        const player = scene.physics.add.sprite(
+            directions.x,
+            directions.y,
+            ASSETS.PLAYER,
+            1
+        );
 
-        const playerCollisions = [breakableLayer, wallsLayer];
+        player.setBounce(1.2);
+        player.setCollideWorldBounds(true);
+
+        collisions.forEach(layer => {
+            scene.physics.add.collider(player, layer, (_, item) => {
+                const t = item as any;
+                this.breakableMap.map.removeTileAt(t.x, t.y)
+            });
+        });
+
+        // Make the collision height smaller
+
+        const radius = GameDimensions.tileWidth / 4;
+        player.body.setCircle(
+            radius,
+            (GameDimensions.playerWidth - (radius * 2)) / 2,
+            (GameDimensions.playerHeight - (radius * 2)),
+        );
+
+        return player
+    }
+
+    private create(scene: Phaser.Scene) {
+        this.makeMaps(scene);
+
+        const playerCollisions = [
+            this.breakableMap,
+            this.wallsMap
+        ].map(it => it.layer);
 
         this.socket.emit(SocketEvents.NewPlayer);
         this.socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
@@ -164,7 +198,7 @@ export class BombGame {
                 if (!(id in playerRegistry)) {
                     playerRegistry[id] = {
                         directions: data.directions,
-                        player: BombGame.fabricPlayer(
+                        player: this.fabricPlayer(
                             scene,
                             data.directions,
                             playerCollisions

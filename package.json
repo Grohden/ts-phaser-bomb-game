@@ -7,6 +7,7 @@
   "scripts": {
     "bootstrap": "lerna bootstrap --hoist",
     "build": "lerna run build --stream",
-    "start": "node ./server/build/server.js"
+    "start:front": "cd front/ && npm run start",
+    "start:server": "cd server/ && npm run start"
   }
 }
