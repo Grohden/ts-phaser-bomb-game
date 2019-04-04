@@ -1,4 +1,4 @@
-import { BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SocketEvents } from 'commons'
+import { BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SocketEvents, SimpleCoordinates } from 'commons'
 import express from 'express'
 import http from 'http'
 import path from 'path'
@@ -29,7 +29,8 @@ server.listen(5000, function () {
 
 
 const state: BackendState = {
-    playerRegistry: {}
+    playerRegistry: {},
+    destroyedWalls: []
 };
 
 io.on('connection', function (socket) {
@@ -62,6 +63,11 @@ io.on('connection', function (socket) {
 
         io.sockets.emit(SocketEvents.PlayerDisconnect, socket.id)
     });
+
+    socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
+        state.destroyedWalls = state.destroyedWalls.concat(coordinates)
+    })
+
 });
 
 setInterval(function () {

@@ -1,6 +1,11 @@
 export const SERVER_UPDATE_INTERVAL = 1000 / 60;
 export const CLIENT_UPDATE_INTERVAL = 1000 / 60;
 
+export interface SimpleCoordinates {
+    x: number,
+    y: number
+}
+
 export const GameDimensions = {
     gameWidth: 540,
     gameHeight: 540,
@@ -25,7 +30,8 @@ export const enum SocketEvents {
     NewPlayer = 'new_player',
     Disconnect = 'disconnect',
     PlayerDisconnect = 'player_disconnect',
-    StateUpdate = 'state_change'
+    StateUpdate = 'state_change',
+    WallDestroyed = 'wall_destroyed'
 }
 
 
@@ -34,5 +40,6 @@ export interface BackendState {
         [id: string]: {
             directions: PlayerDirections
         }
-    };
+    },
+    destroyedWalls: Array<SimpleCoordinates>
 }

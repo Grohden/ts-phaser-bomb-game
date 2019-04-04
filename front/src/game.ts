@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BackendState, GameDimensions, PlayerDirections, SocketEvents } from 'commons';
+import { BackendState, GameDimensions, PlayerDirections, SocketEvents, SimpleCoordinates } from 'commons';
 import { ASSETS, MAIN_TILES, MAPS } from "./assets";
 import Socket = SocketIOClient.Socket;
 
@@ -147,8 +147,7 @@ export class BombGame {
 
     private fabricPlayer(
         scene: Phaser.Scene,
-        directions: PlayerDirections,
-        collisions: Array<Phaser.GameObjects.GameObject>
+        directions: PlayerDirections
     ): Phaser.Physics.Arcade.Sprite {
         const player = scene.physics.add.sprite(
             directions.x,
@@ -160,12 +159,14 @@ export class BombGame {
         player.setBounce(1.2);
         player.setCollideWorldBounds(true);
 
-        collisions.forEach(layer => {
-            scene.physics.add.collider(player, layer, (_, item) => {
-                const t = item as any;
-                this.breakableMap.map.removeTileAt(t.x, t.y)
-            });
+        scene.physics.add.collider(player, this.breakableMap.layer, (_, tile: unknown) => {
+            const { x, y } = tile as SimpleCoordinates;
+
+            this.breakableMap.map.removeTileAt(x, y)
+            this.socket.emit(SocketEvents.WallDestroyed, { x, y })
         });
+
+        scene.physics.add.collider(player, this.wallsMap.layer)
 
         // Make the collision height smaller
 
@@ -179,39 +180,28 @@ export class BombGame {
         return player
     }
 
-    private initWithState(
-        scene: Phaser.Scene,
-        state: BackendState,
-        collisions: Array<Phaser.GameObjects.GameObject>
-    ) {
+    private initWithState(scene: Phaser.Scene, state: BackendState) {
         const { playerRegistry } = this;
 
         for (const [id, data] of Object.entries(state.playerRegistry)) {
             playerRegistry[id] = {
                 directions: data.directions,
-                player: this.fabricPlayer(
-                    scene,
-                    data.directions,
-                    collisions
-                )
+                player: this.fabricPlayer(scene, data.directions)
             }
+        }
+
+        for (const { x, y } of state.destroyedWalls) {
+            this.breakableMap.map.removeTileAt(x, y)
         }
     }
 
-    private initSocketListeners(
-        scene: Phaser.Scene,
-        collisions: Array<Phaser.GameObjects.GameObject>
-    ) {
+    private initSocketListeners(scene: Phaser.Scene) {
         const { playerRegistry } = this;
 
         this.socket.on(SocketEvents.NewPlayer, (player: PlayerDirections & { id: string }) => {
             playerRegistry[player.id] = {
                 directions: player,
-                player: this.fabricPlayer(
-                    scene,
-                    player,
-                    collisions
-                )
+                player: this.fabricPlayer(scene, player)
             }
         });
 
@@ -230,18 +220,16 @@ export class BombGame {
                 }
             }
         });
+
+        this.socket.on(SocketEvents.WallDestroyed, ({ x, y }: SimpleCoordinates) => {
+            this.breakableMap.map.removeTileAt(x, y)
+        })
     }
 
     private create(scene: Phaser.Scene, state: BackendState) {
         this.makeMaps(scene);
-
-        const playerCollisions = [
-            this.breakableMap,
-            this.wallsMap
-        ].map(it => it.layer);
-
-        this.initWithState(scene, state, playerCollisions)
-        this.initSocketListeners(scene, playerCollisions)
+        this.initWithState(scene, state)
+        this.initSocketListeners(scene)
 
         scene.anims.create({
             key: 'left',
