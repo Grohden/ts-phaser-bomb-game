@@ -1,7 +1,8 @@
 export const MAIN_TILES = 'MAIN_TILES';
 
 export const ASSETS = {
-    PLAYER: 'dude'
+    PLAYER: 'dude',
+    BOMB: 'bomb'
 };
 
 export const MAPS = {
