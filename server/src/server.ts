@@ -1,8 +1,9 @@
-import {BackendState, PlayerDirections, SOCKET_UPDATE_INTERVAL, SocketEvents} from 'commons'
+import { BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SocketEvents } from 'commons'
 import express from 'express'
 import http from 'http'
 import path from 'path'
 import socketIO from 'socket.io'
+import { Socket } from 'dgram';
 
 
 const app = express();
@@ -32,18 +33,20 @@ const state: BackendState = {
 };
 
 io.on('connection', function (socket) {
-    socket.on(SocketEvents.NewPlayer, () => {
-        state.playerRegistry[socket.id] = {
-            directions: {
-                down: false,
-                left: false,
-                right: false,
-                up: false,
-                x: 0,
-                y: 0
-            }
-        };
-    });
+    const newPlayer = {
+        directions: {
+            down: false,
+            left: false,
+            right: false,
+            up: false,
+            x: 0,
+            y: 0
+        }
+    };
+    state.playerRegistry[socket.id] = newPlayer
+
+    socket.emit(SocketEvents.InitWithState, state)
+    socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: socket.id })
 
     socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
         const player = state.playerRegistry[socket.id];
@@ -63,4 +66,4 @@ io.on('connection', function (socket) {
 
 setInterval(function () {
     io.sockets.emit(SocketEvents.StateUpdate, state);
-}, SOCKET_UPDATE_INTERVAL);
+}, SERVER_UPDATE_INTERVAL);

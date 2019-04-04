@@ -1,4 +1,5 @@
-export const SOCKET_UPDATE_INTERVAL = 1000 / 60;
+export const SERVER_UPDATE_INTERVAL = 1000 / 60;
+export const CLIENT_UPDATE_INTERVAL = 1000 / 60;
 
 export const GameDimensions = {
     gameWidth: 540,
@@ -19,6 +20,7 @@ export interface PlayerDirections {
 }
 
 export const enum SocketEvents {
+    InitWithState = 'init_with_state',
     Movement = 'movement',
     NewPlayer = 'new_player',
     Disconnect = 'disconnect',

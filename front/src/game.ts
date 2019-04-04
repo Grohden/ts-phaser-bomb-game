@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import {BackendState, GameDimensions, PlayerDirections, SocketEvents} from 'commons';
-import {ASSETS, MAIN_TILES, MAPS} from "./assets";
+import { BackendState, GameDimensions, PlayerDirections, SocketEvents } from 'commons';
+import { ASSETS, MAIN_TILES, MAPS } from "./assets";
 import Socket = SocketIOClient.Socket;
 
 interface Directions {
@@ -16,7 +16,7 @@ interface SceneMap {
     layer: Phaser.Tilemaps.DynamicTilemapLayer
 }
 
-function inRange({min, max, value}: { min: number, max: number, value: number }) {
+function inRange({ min, max, value }: { min: number, max: number, value: number }) {
     return value >= min && value <= max
 }
 
@@ -72,7 +72,7 @@ export class BombGame {
 
     private static applyPhysicsAndAnimations(
         sprite: Phaser.Physics.Arcade.Sprite,
-        {left, right, down, up}: Directions
+        { left, right, down, up }: Directions
     ) {
         const velocity = 160;
         if (left) {
@@ -96,40 +96,9 @@ export class BombGame {
     }
 
     startGame() {
-        const self = this;
-
-        new Phaser.Game({
-            type: Phaser.AUTO,
-            width: GameDimensions.gameWidth,
-            height: GameDimensions.gameHeight,
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: {},
-                    debug: true
-                }
-            },
-            scene: {
-                preload: function (this: Phaser.Scene) {
-                    BombGame.preload(this)
-                },
-                create: function (this: Phaser.Scene) {
-                    self.create(this)
-                },
-                update: function (this: Phaser.Scene) {
-                    self.update(this)
-                }
-            }
-        });
-
-        // Listen to disconnections
-        this.socket.on(SocketEvents.PlayerDisconnect, (playerId: string) => {
-            const registry = this.playerRegistry[playerId];
-            if (registry) {
-                registry.player.destroy(true);
-                delete this.playerRegistry[playerId]
-            }
-        });
+        this.socket.on(SocketEvents.InitWithState, (state: BackendState) => {
+            this.initPhaser(state)
+        })
     }
 
     private makeMaps(scene: Phaser.Scene) {
@@ -147,6 +116,33 @@ export class BombGame {
         // Breakables
         this.breakableMap = BombGame.makeDefaultTileMap(scene, MAPS.BREAKABLES, MAIN_TILES);
         this.breakableMap.map.setCollisionBetween(0, 2);
+    }
+
+    private initPhaser(state: BackendState) {
+        const self = this
+        new Phaser.Game({
+            type: Phaser.AUTO,
+            width: GameDimensions.gameWidth,
+            height: GameDimensions.gameHeight,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: {},
+                    debug: true
+                }
+            },
+            scene: {
+                preload: function (this: Phaser.Scene) {
+                    BombGame.preload(this)
+                },
+                create: function (this: Phaser.Scene) {
+                    self.create(this, state)
+                },
+                update: function (this: Phaser.Scene) {
+                    self.update(this)
+                }
+            }
+        });
     }
 
     private fabricPlayer(
@@ -183,7 +179,60 @@ export class BombGame {
         return player
     }
 
-    private create(scene: Phaser.Scene) {
+    private initWithState(
+        scene: Phaser.Scene,
+        state: BackendState,
+        collisions: Array<Phaser.GameObjects.GameObject>
+    ) {
+        const { playerRegistry } = this;
+
+        for (const [id, data] of Object.entries(state.playerRegistry)) {
+            playerRegistry[id] = {
+                directions: data.directions,
+                player: this.fabricPlayer(
+                    scene,
+                    data.directions,
+                    collisions
+                )
+            }
+        }
+    }
+
+    private initSocketListeners(
+        scene: Phaser.Scene,
+        collisions: Array<Phaser.GameObjects.GameObject>
+    ) {
+        const { playerRegistry } = this;
+
+        this.socket.on(SocketEvents.NewPlayer, (player: PlayerDirections & { id: string }) => {
+            playerRegistry[player.id] = {
+                directions: player,
+                player: this.fabricPlayer(
+                    scene,
+                    player,
+                    collisions
+                )
+            }
+        });
+
+        this.socket.on(SocketEvents.PlayerDisconnect, (playerId: string) => {
+            const registry = this.playerRegistry[playerId];
+            if (registry) {
+                registry.player.destroy(true);
+                delete playerRegistry[playerId]
+            }
+        });
+
+        this.socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
+            for (const [id, data] of Object.entries(backState.playerRegistry)) {
+                if (this.socket.id !== id) {
+                    playerRegistry[id].directions = data.directions
+                }
+            }
+        });
+    }
+
+    private create(scene: Phaser.Scene, state: BackendState) {
         this.makeMaps(scene);
 
         const playerCollisions = [
@@ -191,26 +240,8 @@ export class BombGame {
             this.wallsMap
         ].map(it => it.layer);
 
-        this.socket.emit(SocketEvents.NewPlayer);
-        this.socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
-            for (const [id, data] of Object.entries(backState.playerRegistry)) {
-                const {playerRegistry} = this;
-                if (!(id in playerRegistry)) {
-                    playerRegistry[id] = {
-                        directions: data.directions,
-                        player: this.fabricPlayer(
-                            scene,
-                            data.directions,
-                            playerCollisions
-                        )
-                    }
-                } else {
-                    if (this.socket.id !== id) {
-                        playerRegistry[id].directions = data.directions
-                    }
-                }
-            }
-        });
+        this.initWithState(scene, state, playerCollisions)
+        this.initSocketListeners(scene, playerCollisions)
 
         scene.anims.create({
             key: 'left',
@@ -244,7 +275,7 @@ export class BombGame {
 
     private update(scene: Phaser.Scene) {
         for (const [id, registry] of Object.entries(this.playerRegistry)) {
-            const {player, directions} = registry;
+            const { player, directions } = registry;
 
             if (this.socket.id === id) {
                 const cursors = scene.input.keyboard.createCursorKeys();
