@@ -1,2 +1,5 @@
 node_modules
-./server/build/*
+server/build/**/*.js
+commons/**/*.js
+commons/**/*.js.map
+lerna-debug.log
