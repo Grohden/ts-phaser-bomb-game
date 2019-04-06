@@ -1,5 +1,5 @@
-export const SERVER_UPDATE_INTERVAL = 1000 / 60;
-export const CLIENT_UPDATE_INTERVAL = 1000 / 60;
+export const SERVER_UPDATE_INTERVAL = 1000 / 60
+export const CLIENT_UPDATE_INTERVAL = 1000 / 60
 
 export interface SimpleCoordinates {
     x: number,
@@ -13,7 +13,7 @@ export const GameDimensions = {
     playerHeight: 48,
     tileWidth: 36,
     tileHeight: 36
-};
+}
 
 export interface PlayerDirections {
     up: boolean,
