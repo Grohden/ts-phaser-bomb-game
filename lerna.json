@@ -1,6 +1,6 @@
 {
   "packages": [
-    "front/**",
+    "client/**",
     "server/**",
     "commons/**"
   ],

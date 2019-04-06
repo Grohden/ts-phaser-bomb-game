@@ -1,7 +1,7 @@
 const path = require('path')
 
 module.exports = {
-    entry: './src/front.ts',
+    entry: './src/client.ts',
     mode: 'development',
     module: {
         rules: [

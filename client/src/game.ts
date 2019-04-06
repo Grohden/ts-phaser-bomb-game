@@ -1,7 +1,7 @@
-import { BackendState, GameDimensions, PlayerDirections, SocketEvents, SimpleCoordinates } from "commons"
+import { BackendState, GameDimensions, PlayerDirections, SimpleCoordinates, SocketEvents } from "commons"
 import Phaser from "phaser"
 import { ASSETS, MAIN_TILES, MAPS } from "./assets"
-import Socket = SocketIOClient.Socket
+import Socket = SocketIOClient.Socket;
 
 interface Directions {
     left: boolean;
@@ -16,11 +16,7 @@ interface SceneMap {
     layer: Phaser.Tilemaps.DynamicTilemapLayer;
 }
 
-function inRange({
-                     min,
-                     max,
-                     value
-                 }: {
+function inRange({ min, max, value }: {
     min: number;
     max: number;
     value: number;
@@ -29,20 +25,20 @@ function inRange({
 }
 
 export class BombGame {
-    private socket: Socket
-    private backgroundMap: SceneMap
-    private breakableMap: SceneMap
-    private wallsMap: SceneMap
+    private socket: Socket;
+    private backgroundMap: SceneMap;
+    private breakableMap: SceneMap;
+    private wallsMap: SceneMap;
     private bombMap: {
         [xy: string]: Phaser.GameObjects.Sprite;
-    } = {}
+    } = {};
 
     private playerRegistry: {
         [id: string]: {
             directions: PlayerDirections;
             player: Phaser.Physics.Arcade.Sprite;
         };
-    } = {}
+    } = {};
 
     constructor(socket: Socket) {
         this.socket = socket
@@ -57,10 +53,10 @@ export class BombGame {
             key,
             tileWidth: GameDimensions.tileWidth,
             tileHeight: GameDimensions.tileHeight
-        })
+        });
 
-        const tiles = map.addTilesetImage(imageName)
-        const layer = map.createDynamicLayer(0, tiles, 0, 0)
+        const tiles = map.addTilesetImage(imageName);
+        const layer = map.createDynamicLayer(0, tiles, 0, 0);
 
         return {
             layer,
@@ -70,14 +66,14 @@ export class BombGame {
     }
 
     private static preload(scene: Phaser.Scene) {
-        scene.load.image(MAIN_TILES, "assets/tileset.png")
-        scene.load.tilemapCSV(MAPS.BACKGROUND, "assets/map_background.csv")
-        scene.load.tilemapCSV(MAPS.WALLS, "assets/map_walls.csv")
-        scene.load.tilemapCSV(MAPS.BREAKABLES, "assets/map_breakables.csv")
+        scene.load.image(MAIN_TILES, "assets/tileset.png");
+        scene.load.tilemapCSV(MAPS.BACKGROUND, "assets/map_background.csv");
+        scene.load.tilemapCSV(MAPS.WALLS, "assets/map_walls.csv");
+        scene.load.tilemapCSV(MAPS.BREAKABLES, "assets/map_breakables.csv");
         scene.load.spritesheet(ASSETS.PLAYER, "assets/dude.png", {
             frameWidth: GameDimensions.playerWidth,
             frameHeight: GameDimensions.playerHeight
-        })
+        });
 
         scene.load.spritesheet(ASSETS.BOMB, "assets/bomb.png", {
             frameWidth: GameDimensions.playerWidth,
@@ -87,17 +83,17 @@ export class BombGame {
 
     private static applyPhysicsAndAnimations(
         sprite: Phaser.Physics.Arcade.Sprite,
-        {left, right, down, up}: Directions
+        { left, right, down, up }: Directions
     ) {
-        const velocity = 160
+        const velocity = 160;
         if (left) {
-            sprite.setVelocityX(-velocity)
+            sprite.setVelocityX(-velocity);
             sprite.anims.play("left", true)
         } else if (right) {
-            sprite.setVelocityX(velocity)
+            sprite.setVelocityX(velocity);
             sprite.anims.play("right", true)
         } else {
-            sprite.setVelocityX(0)
+            sprite.setVelocityX(0);
             sprite.anims.play("turn")
         }
 
@@ -122,23 +118,23 @@ export class BombGame {
             scene,
             MAPS.BACKGROUND,
             MAIN_TILES
-        )
+        );
 
         // Walls
-        this.wallsMap = BombGame.makeDefaultTileMap(scene, MAPS.WALLS, MAIN_TILES)
-        this.wallsMap.map.setCollisionBetween(0, 2)
+        this.wallsMap = BombGame.makeDefaultTileMap(scene, MAPS.WALLS, MAIN_TILES);
+        this.wallsMap.map.setCollisionBetween(0, 2);
 
         // Breakables
         this.breakableMap = BombGame.makeDefaultTileMap(
             scene,
             MAPS.BREAKABLES,
             MAIN_TILES
-        )
+        );
         this.breakableMap.map.setCollisionBetween(0, 2)
     }
 
     private initPhaser(state: BackendState) {
-        const self = this
+        const self = this;
         new Phaser.Game({
             type: Phaser.AUTO,
             width: GameDimensions.gameWidth,
@@ -173,38 +169,38 @@ export class BombGame {
             directions.y,
             ASSETS.PLAYER,
             1
-        )
+        );
 
-        player.setBounce(1.2)
-        player.setCollideWorldBounds(true)
+        player.setBounce(1.2);
+        player.setCollideWorldBounds(true);
 
         scene.physics.add.collider(
             player,
             this.breakableMap.layer,
             (_, tile: unknown) => {
-                const {x, y} = tile as SimpleCoordinates
+                const { x, y } = tile as SimpleCoordinates;
 
-                this.breakableMap.map.removeTileAt(x, y)
-                this.socket.emit(SocketEvents.WallDestroyed, {x, y})
+                this.breakableMap.map.removeTileAt(x, y);
+                this.socket.emit(SocketEvents.WallDestroyed, { x, y })
             }
-        )
+        );
 
-        scene.physics.add.collider(player, this.wallsMap.layer)
+        scene.physics.add.collider(player, this.wallsMap.layer);
 
         // Make the collision height smaller
 
-        const radius = GameDimensions.tileWidth / 4
+        const radius = GameDimensions.tileWidth / 4;
         player.body.setCircle(
             radius,
             (GameDimensions.playerWidth - radius * 2) / 2,
             GameDimensions.playerHeight - radius * 2
-        )
+        );
 
         return player
     }
 
     private initWithState(scene: Phaser.Scene, state: BackendState) {
-        const {playerRegistry} = this
+        const { playerRegistry } = this;
 
         for (const [id, data] of Object.entries(state.playerRegistry)) {
             playerRegistry[id] = {
@@ -213,13 +209,13 @@ export class BombGame {
             }
         }
 
-        for (const {x, y} of state.destroyedWalls) {
+        for (const { x, y } of state.destroyedWalls) {
             this.breakableMap.map.removeTileAt(x, y)
         }
     }
 
     private initSocketListeners(scene: Phaser.Scene) {
-        const {playerRegistry} = this
+        const { playerRegistry } = this;
 
         this.socket.on(
             SocketEvents.NewPlayer,
@@ -229,15 +225,15 @@ export class BombGame {
                     player: this.fabricPlayer(scene, player)
                 }
             }
-        )
+        );
 
         this.socket.on(SocketEvents.PlayerDisconnect, (playerId: string) => {
-            const registry = this.playerRegistry[playerId]
+            const registry = this.playerRegistry[playerId];
             if (registry) {
-                registry.player.destroy(true)
+                registry.player.destroy(true);
                 delete playerRegistry[playerId]
             }
-        })
+        });
 
         this.socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
             for (const [id, data] of Object.entries(backState.playerRegistry)) {
@@ -245,20 +241,20 @@ export class BombGame {
                     playerRegistry[id].directions = data.directions
                 }
             }
-        })
+        });
 
         this.socket.on(
             SocketEvents.WallDestroyed,
-            ({x, y}: SimpleCoordinates) => {
+            ({ x, y }: SimpleCoordinates) => {
                 this.breakableMap.map.removeTileAt(x, y)
             }
         )
     }
 
     private create(scene: Phaser.Scene, state: BackendState) {
-        this.makeMaps(scene)
-        this.initWithState(scene, state)
-        this.initSocketListeners(scene)
+        this.makeMaps(scene);
+        this.initWithState(scene, state);
+        this.initSocketListeners(scene);
 
         scene.anims.create({
             key: "left",
@@ -268,7 +264,7 @@ export class BombGame {
             }),
             frameRate: 10,
             repeat: -1
-        })
+        });
 
         scene.anims.create({
             key: "turn",
@@ -279,7 +275,7 @@ export class BombGame {
                 }
             ],
             frameRate: 20
-        })
+        });
 
         scene.anims.create({
             key: "right",
@@ -293,21 +289,22 @@ export class BombGame {
     }
 
     private fabricBombAt(scene: Phaser.Scene, x: number, y: number) {
-        const {tileWidth, tileHeight} = GameDimensions
+        const { tileWidth, tileHeight } = GameDimensions;
         const newBomb = scene.add.sprite(
             x * tileWidth + tileWidth / 2,
             y * tileHeight + tileHeight / 2,
             ASSETS.BOMB
-        )
+        );
 
-        this.bombMap[`${x}-${y}`] = newBomb
+        const key = `${x}-${y}`
+        this.bombMap[key] = newBomb
 
-        // setTimeout(() => {
-        //   if (this.hasABombAt(x, y)) {
-        //     this.bombMap[`${x}-${y}`].destroy(true);
-        //   }
-        //   delete this.bombMap[`${x}-${y}`];
-        // }, 1000);
+        setTimeout(() => {
+            if (this.hasABombAt(x, y)) {
+                this.bombMap[key].destroy(true);
+                delete this.bombMap[key];
+            }
+        }, 1000);
     }
 
     private hasABombAt(x: number, y: number): boolean {
@@ -315,7 +312,7 @@ export class BombGame {
     }
 
     private findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
-        const {tileWidth, tileHeight} = GameDimensions
+        const { tileWidth, tileHeight } = GameDimensions;
         return {
             x: Math.floor(coords.x / tileWidth),
             y: Math.floor(coords.y / tileHeight)
@@ -324,10 +321,10 @@ export class BombGame {
 
     private update(scene: Phaser.Scene) {
         for (const [id, registry] of Object.entries(this.playerRegistry)) {
-            const {player, directions} = registry
+            const { player, directions } = registry;
 
             if (this.socket.id === id) {
-                const cursors = scene.input.keyboard.createCursorKeys()
+                const cursors = scene.input.keyboard.createCursorKeys();
                 Object.assign(directions, {
                     left: cursors.left!.isDown,
                     right: cursors.right!.isDown,
@@ -335,29 +332,31 @@ export class BombGame {
                     up: cursors.down!.isDown,
                     x: player.x,
                     y: player.y
-                })
-                BombGame.applyPhysicsAndAnimations(player, directions)
+                });
+                BombGame.applyPhysicsAndAnimations(player, directions);
 
                 if (cursors.space!.isDown) {
-                    const {x, y} = this.findPlayerMapPosition(player)
-                    this.fabricBombAt(scene, x, y)
+                    const { x, y } = this.findPlayerMapPosition(player);
+                    if (!this.hasABombAt(x, y)) {
+                        this.fabricBombAt(scene, x, y)
+                    }
                 }
             } else {
                 // Fixes some position imprecision (from player animations)
-                const tolerance = 10
+                const tolerance = 10;
                 const isXOk = inRange({
                     min: directions.x - tolerance,
                     max: directions.x + tolerance,
                     value: player.x
-                })
+                });
                 const isYOk = inRange({
                     min: directions.y - tolerance,
                     max: directions.y + tolerance,
                     value: player.y
-                })
+                });
 
                 if (!isXOk || !isYOk) {
-                    player.x = directions.x
+                    player.x = directions.x;
                     player.y = directions.y
                 } else {
                     BombGame.applyPhysicsAndAnimations(player, directions)
@@ -366,7 +365,7 @@ export class BombGame {
         }
 
         // Update server
-        const player = this.playerRegistry[this.socket.id]
+        const player = this.playerRegistry[this.socket.id];
         if (player) {
             this.socket.emit(SocketEvents.Movement, player.directions)
         }
