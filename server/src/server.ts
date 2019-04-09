@@ -33,6 +33,7 @@ const state: BackendState = {
 }
 
 io.on('connection', function (socket) {
+    const playerId = socket.id
     const newPlayer = {
         directions: {
             down: false,
@@ -43,24 +44,25 @@ io.on('connection', function (socket) {
             y: 0
         }
     }
-    state.playerRegistry[socket.id] = newPlayer
+
+    state.playerRegistry[playerId] = newPlayer
 
     socket.emit(SocketEvents.InitWithState, state)
-    socket.broadcast.emit(SocketEvents.NewPlayer, {...newPlayer, id: socket.id})
+    socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId })
 
     socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
-        const player = state.playerRegistry[socket.id]
+        const player = state.playerRegistry[playerId]
         if (player) {
             player.directions = directions
         }
     })
 
     socket.on(SocketEvents.Disconnect, () => {
-        if (socket.id in state.playerRegistry) {
-            delete state.playerRegistry[socket.id]
+        if (playerId in state.playerRegistry) {
+            delete state.playerRegistry[playerId]
         }
 
-        io.sockets.emit(SocketEvents.PlayerDisconnect, socket.id)
+        io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
     })
 
     socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {

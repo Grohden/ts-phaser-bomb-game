@@ -1,7 +1,9 @@
 import { BackendState, GameDimensions, PlayerDirections, SimpleCoordinates, SocketEvents } from "commons"
 import Phaser from "phaser"
-import { ASSETS, MAIN_TILES, MAPS } from "./assets"
+import { ASSETS, MAIN_TILES, MAPS, BOMB_TIME } from "./assets"
 import Socket = SocketIOClient.Socket;
+
+const debug = true;
 
 interface Directions {
     left: boolean;
@@ -29,8 +31,13 @@ export class BombGame {
     private backgroundMap: SceneMap;
     private breakableMap: SceneMap;
     private wallsMap: SceneMap;
+    private spawnedBombCount = 0
+    private playerMaxBombSpawn = 2
     private bombMap: {
-        [xy: string]: Phaser.GameObjects.Sprite;
+        [xy: string]: {
+            sprite: Phaser.GameObjects.Sprite,
+            range: number
+        }
     } = {};
 
     private playerRegistry: {
@@ -76,6 +83,11 @@ export class BombGame {
         });
 
         scene.load.spritesheet(ASSETS.BOMB, "assets/bomb.png", {
+            frameWidth: GameDimensions.playerWidth,
+            frameHeight: GameDimensions.playerHeight
+        })
+
+        scene.load.spritesheet(ASSETS.EXPLOSION, "assets/explosion.png", {
             frameWidth: GameDimensions.playerWidth,
             frameHeight: GameDimensions.playerHeight
         })
@@ -143,7 +155,7 @@ export class BombGame {
                 default: "arcade",
                 arcade: {
                     gravity: {},
-                    debug: true
+                    debug
                 }
             },
             scene: {
@@ -174,16 +186,7 @@ export class BombGame {
         player.setBounce(1.2);
         player.setCollideWorldBounds(true);
 
-        scene.physics.add.collider(
-            player,
-            this.breakableMap.layer,
-            (_, tile: unknown) => {
-                const { x, y } = tile as SimpleCoordinates;
-
-                this.breakableMap.map.removeTileAt(x, y);
-                this.socket.emit(SocketEvents.WallDestroyed, { x, y })
-            }
-        );
+        scene.physics.add.collider(player, this.breakableMap.layer);
 
         scene.physics.add.collider(player, this.wallsMap.layer);
 
@@ -288,7 +291,51 @@ export class BombGame {
         })
     }
 
-    private fabricBombAt(scene: Phaser.Scene, x: number, y: number) {
+    private putExplosionAt(scene: Phaser.Scene, x: number, y: number, range: number) {
+        const { tileWidth, tileHeight } = GameDimensions;
+        const offset = Math.floor(range / 2);
+        const explosions: Array<Phaser.GameObjects.Sprite> = []
+        const putAndExplodeAdjacent = (sx: number, sy: number) => {
+            const sprite = scene.add.sprite(sx, sy, ASSETS.EXPLOSION)
+
+            explosions.push(sprite)
+        }
+
+        for (let i = 0; i < range; i++) {
+            const nX = ((x + i) - offset)
+            const nY = ((y + i) - offset)
+            putAndExplodeAdjacent(
+                nX * tileWidth + tileWidth / 2,
+                y * tileHeight + tileHeight / 2
+            );
+
+            putAndExplodeAdjacent(
+                x * tileWidth + tileWidth / 2,
+                nY * tileHeight + tileHeight / 2,
+            );
+
+            this.explodeBombAt(scene, nX, y)
+            this.explodeBombAt(scene, x, nY)
+        }
+
+        setTimeout(() => {
+            explosions.forEach(e => e.destroy(true))
+        }, 1000)
+    }
+
+    private destroyWallAt(x: number, y: number) {
+        this.breakableMap.map.removeTileAt(x, y);
+        this.socket.emit(SocketEvents.WallDestroyed, { x, y })
+    }
+
+    private tryToSetupBombAt(scene: Phaser.Scene, x: number, y: number) {
+        if (this.spawnedBombCount >= this.playerMaxBombSpawn) {
+            return
+        } else {
+            this.spawnedBombCount++
+        }
+
+
         const { tileWidth, tileHeight } = GameDimensions;
         const newBomb = scene.add.sprite(
             x * tileWidth + tileWidth / 2,
@@ -297,17 +344,40 @@ export class BombGame {
         );
 
         const key = `${x}-${y}`
-        this.bombMap[key] = newBomb
+        this.bombMap[key] = {
+            sprite: newBomb,
+            range: 3
+        }
 
         setTimeout(() => {
-            if (this.hasABombAt(x, y)) {
-                this.bombMap[key].destroy(true);
-                delete this.bombMap[key];
-            }
-        }, 1000);
+            this.explodeBombAt(scene, x, y)
+            this.spawnedBombCount--
+        }, BOMB_TIME);
     }
 
-    private hasABombAt(x: number, y: number): boolean {
+    private explodeBombAt(scene: Phaser.Scene, x: number, y: number) {
+        const key = `${x}-${y}`
+
+        if (this.hasBombAt(x, y)) {
+            const bomb = this.bombMap[key]
+            const offset = Math.floor(bomb.range / 2);
+            for (let i = 0; i < 3; i++) {
+                this.destroyWallAt((i + x) - offset, y);
+                this.destroyWallAt(x, (i + y) - offset);
+            }
+
+            bomb.sprite.destroy(true);
+            delete this.bombMap[key];
+
+            this.putExplosionAt(scene, x, y, bomb.range)
+
+            debug && console.debug(`Bomb exploded at x: ${x} y:${y}`)
+        } else {
+            debug && console.debug(`Bomb not found at x: ${x} y:${y}`)
+        }
+    }
+
+    private hasBombAt(x: number, y: number): boolean {
         return `${x}-${y}` in this.bombMap
     }
 
@@ -315,7 +385,8 @@ export class BombGame {
         const { tileWidth, tileHeight } = GameDimensions;
         return {
             x: Math.floor(coords.x / tileWidth),
-            y: Math.floor(coords.y / tileHeight)
+            // +(tileHeight / 2) is a precision fix :D
+            y: Math.floor((coords.y + (tileHeight / 2)) / tileHeight)
         }
     }
 
@@ -337,8 +408,8 @@ export class BombGame {
 
                 if (cursors.space!.isDown) {
                     const { x, y } = this.findPlayerMapPosition(player);
-                    if (!this.hasABombAt(x, y)) {
-                        this.fabricBombAt(scene, x, y)
+                    if (!this.hasBombAt(x, y)) {
+                        this.tryToSetupBombAt(scene, x, y)
                     }
                 }
             } else {
