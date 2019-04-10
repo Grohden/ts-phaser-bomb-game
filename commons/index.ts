@@ -26,6 +26,7 @@ export interface PlayerDirections {
 
 export const enum SocketEvents {
     InitWithState = 'init_with_state',
+    NewBombAt = 'new_bomb_at',
     Movement = 'movement',
     NewPlayer = 'new_player',
     Disconnect = 'disconnect',

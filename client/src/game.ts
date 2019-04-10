@@ -246,6 +246,10 @@ export class BombGame {
             }
         });
 
+        this.socket.on(SocketEvents.NewBombAt, ({ x, y }: SimpleCoordinates) => {
+            this.setupBombAt(scene, x, y)
+        })
+
         this.socket.on(
             SocketEvents.WallDestroyed,
             ({ x, y }: SimpleCoordinates) => {
@@ -328,31 +332,39 @@ export class BombGame {
         this.socket.emit(SocketEvents.WallDestroyed, { x, y })
     }
 
-    private tryToSetupBombAt(scene: Phaser.Scene, x: number, y: number) {
+    private setupPlayerbombAt(scene: Phaser.Scene, x: number, y: number) {
         if (this.spawnedBombCount >= this.playerMaxBombSpawn) {
             return
         } else {
             this.spawnedBombCount++
+            this.registerBombAt(scene, x, y)
+            this.socket.emit(SocketEvents.NewBombAt, { x, y })
+
+            setTimeout(() => {
+                this.explodeBombAt(scene, x, y)
+                this.spawnedBombCount--
+            }, BOMB_TIME);
         }
+    }
 
+    private setupBombAt(scene: Phaser.Scene, x: number, y: number) {
+        this.registerBombAt(scene, x, y)
+        setTimeout(() => {
+            this.explodeBombAt(scene, x, y)
+        }, BOMB_TIME);
+    }
 
+    private registerBombAt(scene: Phaser.Scene, x: number, y: number) {
         const { tileWidth, tileHeight } = GameDimensions;
-        const newBomb = scene.add.sprite(
-            x * tileWidth + tileWidth / 2,
-            y * tileHeight + tileHeight / 2,
-            ASSETS.BOMB
-        );
-
+        const nX = x * tileWidth + tileWidth / 2
+        const nY = y * tileHeight + tileHeight / 2
+        const newBomb = scene.add.sprite(nX, nY, ASSETS.BOMB);
         const key = `${x}-${y}`
+
         this.bombMap[key] = {
             sprite: newBomb,
             range: 3
         }
-
-        setTimeout(() => {
-            this.explodeBombAt(scene, x, y)
-            this.spawnedBombCount--
-        }, BOMB_TIME);
     }
 
     private explodeBombAt(scene: Phaser.Scene, x: number, y: number) {
@@ -409,7 +421,7 @@ export class BombGame {
                 if (cursors.space!.isDown) {
                     const { x, y } = this.findPlayerMapPosition(player);
                     if (!this.hasBombAt(x, y)) {
-                        this.tryToSetupBombAt(scene, x, y)
+                        this.setupPlayerbombAt(scene, x, y)
                     }
                 }
             } else {

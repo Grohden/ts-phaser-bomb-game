@@ -65,6 +65,10 @@ io.on('connection', function (socket) {
         io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
     })
 
+    socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
+        socket.broadcast.emit(SocketEvents.NewBombAt, coords)
+    })
+
     socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
         state.destroyedWalls = state.destroyedWalls.concat(coordinates)
     })
