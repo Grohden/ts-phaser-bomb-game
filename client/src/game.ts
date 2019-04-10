@@ -28,6 +28,7 @@ function inRange({ min, max, value }: {
 
 export class BombGame {
     private socket: Socket;
+    private phaserInstance: Phaser.Game;
     private backgroundMap: SceneMap;
     private breakableMap: SceneMap;
     private wallsMap: SceneMap;
@@ -65,11 +66,7 @@ export class BombGame {
         const tiles = map.addTilesetImage(imageName);
         const layer = map.createDynamicLayer(0, tiles, 0, 0);
 
-        return {
-            layer,
-            map,
-            tiles
-        }
+        return { layer, map, tiles }
     }
 
     private static preload(scene: Phaser.Scene) {
@@ -120,7 +117,10 @@ export class BombGame {
 
     startGame() {
         this.socket.on(SocketEvents.InitWithState, (state: BackendState) => {
-            this.initPhaser(state)
+            // Happens at server restarts
+            if (!this.phaserInstance) {
+                this.initPhaser(state)
+            }
         })
     }
 
@@ -147,7 +147,7 @@ export class BombGame {
 
     private initPhaser(state: BackendState) {
         const self = this;
-        new Phaser.Game({
+        this.phaserInstance = new Phaser.Game({
             type: Phaser.AUTO,
             width: GameDimensions.gameWidth,
             height: GameDimensions.gameHeight,
@@ -364,6 +364,11 @@ export class BombGame {
         this.bombMap[key] = {
             sprite: newBomb,
             range: 3
+        }
+
+        for (const registry of Object.values(this.playerRegistry)) {
+            const collidable = scene.physics.add.existing(newBomb, true)
+            scene.physics.add.collider(registry.player, collidable)
         }
     }
 
