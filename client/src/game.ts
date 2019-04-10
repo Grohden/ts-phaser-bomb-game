@@ -299,24 +299,23 @@ export class BombGame {
         const { tileWidth, tileHeight } = GameDimensions;
         const offset = Math.floor(range / 2);
         const explosions: Array<Phaser.GameObjects.Sprite> = []
-        const putAndExplodeAdjacent = (sx: number, sy: number) => {
-            const sprite = scene.add.sprite(sx, sy, ASSETS.EXPLOSION)
+        const putAndExplodeAdjacent = (gridX: number, gridY: number) => {
+            // No Explosions at walls
+            if (!this.wallsMap.map.hasTileAt(gridX, gridY)) {
+                const pixX = this.gridUnitToPixel(gridX, tileWidth)
+                const pixY = this.gridUnitToPixel(gridY, tileHeight)
 
-            explosions.push(sprite)
+                const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION)
+                explosions.push(sprite)
+            }
         }
 
         for (let i = 0; i < range; i++) {
             const nX = ((x + i) - offset)
             const nY = ((y + i) - offset)
-            putAndExplodeAdjacent(
-                nX * tileWidth + tileWidth / 2,
-                y * tileHeight + tileHeight / 2
-            );
 
-            putAndExplodeAdjacent(
-                x * tileWidth + tileWidth / 2,
-                nY * tileHeight + tileHeight / 2,
-            );
+            putAndExplodeAdjacent(nX, y);
+            putAndExplodeAdjacent(x, nY);
 
             this.explodeBombAt(scene, nX, y)
             this.explodeBombAt(scene, x, nY)
@@ -354,10 +353,14 @@ export class BombGame {
         }, BOMB_TIME);
     }
 
+    private gridUnitToPixel(value: number, baseGridSize: number) {
+        return (value * baseGridSize) + (baseGridSize / 2)
+    }
+
     private registerBombAt(scene: Phaser.Scene, x: number, y: number) {
         const { tileWidth, tileHeight } = GameDimensions;
-        const nX = x * tileWidth + tileWidth / 2
-        const nY = y * tileHeight + tileHeight / 2
+        const nX = this.gridUnitToPixel(x, tileWidth)
+        const nY = this.gridUnitToPixel(y, tileHeight)
         const newBomb = scene.add.sprite(nX, nY, ASSETS.BOMB);
         const key = `${x}-${y}`
 
