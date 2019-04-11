@@ -2,9 +2,11 @@
   "name": "root",
   "private": true,
   "devDependencies": {
-    "lerna": "^3.13.1"
+    "lerna": "^3.13.1",
+    "prettier": "1.16.4"
   },
   "scripts": {
+    "prettier": "prettier --write \"{client, server, commons}/**/*.ts\"",
     "bootstrap": "lerna bootstrap --hoist",
     "build": "lerna run build --stream",
     "start:fresh": "npm run build && npm run start:server",
