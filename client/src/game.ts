@@ -312,6 +312,10 @@ export class BombGame {
     );
   }
 
+  private hasBreakableWallAt(gridX: number, gridY: number) {
+    return this.breakableMap.map.hasTileAt(gridX, gridY);
+  }
+
   private putExplosionAt(
     scene: Phaser.Scene,
     x: number,
@@ -328,7 +332,17 @@ export class BombGame {
 
         const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
         explosions.push(sprite);
+        this.destroyWallAt(gridX, gridY);
         return false;
+      } else if (this.hasBreakableWallAt(gridX, gridY)) {
+        // Breakable is replaced by a explosion
+        const pixX = this.gridUnitToPixel(gridX, tileWidth);
+        const pixY = this.gridUnitToPixel(gridY, tileHeight);
+
+        const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+        explosions.push(sprite);
+        this.destroyWallAt(gridX, gridY);
+        return true;
       } else {
         return true;
       }
@@ -437,12 +451,6 @@ export class BombGame {
 
     if (this.hasBombAt(x, y)) {
       const bomb = this.bombMap[key];
-      const offset = Math.floor(bomb.range / 2);
-      for (let i = 0; i < 3; i++) {
-        this.destroyWallAt(i + x - offset, y);
-        this.destroyWallAt(x, i + y - offset);
-      }
-
       bomb.sprite.destroy(true);
       delete this.bombMap[key];
 
