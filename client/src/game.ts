@@ -1,12 +1,6 @@
-import {
-  BackendState,
-  GameDimensions,
-  PlayerDirections,
-  SimpleCoordinates,
-  SocketEvents
-} from "commons";
+import {BackendState, GameDimensions, PlayerDirections, SimpleCoordinates, SocketEvents} from "commons";
 import Phaser from "phaser";
-import { ASSETS, MAIN_TILES, MAPS, BOMB_TIME } from "./assets";
+import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
@@ -49,6 +43,9 @@ export class BombGame {
       sprite: Phaser.GameObjects.Sprite;
       range: number;
     };
+  } = {};
+  private explosionMap: {
+    [xy: string]: Phaser.GameObjects.Sprite;
   } = {};
 
   private playerRegistry: {
@@ -323,77 +320,93 @@ export class BombGame {
     range: number
   ) {
     const { tileWidth, tileHeight } = GameDimensions;
-    const explosions: Array<Phaser.GameObjects.Sprite> = [];
+    const explosions: Array<{
+      sprite: Phaser.GameObjects.Sprite;
+      key: string;
+    }> = [];
     const putAndExplodeAdjacent = (gridX: number, gridY: number) => {
-      // No Explosions at walls
-      if (!this.hasAnyWallAt(gridX, gridY)) {
-        const pixX = this.gridUnitToPixel(gridX, tileWidth);
-        const pixY = this.gridUnitToPixel(gridY, tileHeight);
+      if (this.hasBombAt({ x: gridX, y: gridY })) {
+        console.log(`Found a bomb at ${gridX} - ${gridY}, delegated to it`);
+        // Let the next bomb deal with things
+        this.explodeBombAt(scene, gridX, gridY);
+        return true;
+      } else if (this.hasExplosionAt({ x: gridX, y: gridY })) {
+        console.log(`Found a explosion at ${gridX} - ${gridY}, stopping`);
+        return true;
+      } else if (this.hasAnyWallAt(gridX, gridY)) {
+        // No Explosions at walls
 
-        const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-        explosions.push(sprite);
-        this.destroyWallAt(gridX, gridY);
-        return false;
-      } else if (this.hasBreakableWallAt(gridX, gridY)) {
-        // Breakable is replaced by a explosion
-        const pixX = this.gridUnitToPixel(gridX, tileWidth);
-        const pixY = this.gridUnitToPixel(gridY, tileHeight);
+        if (this.hasBreakableWallAt(gridX, gridY)) {
+          // Breakable is replaced by a explosion
+          const pixX = this.gridUnitToPixel(gridX, tileWidth);
+          const pixY = this.gridUnitToPixel(gridY, tileHeight);
 
-        const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-        explosions.push(sprite);
-        this.destroyWallAt(gridX, gridY);
+          const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+          const key = this.makeKey({ x: gridX, y: gridY });
+
+          explosions.push({ sprite, key });
+          this.explosionMap[key] = sprite;
+
+          this.destroyWallAt(gridX, gridY);
+          console.log(`Broke wall at ${gridX} - ${gridY}, stopping`);
+        } else {
+          console.log(`Found wall at ${gridX} - ${gridY}, stopping`);
+        }
         return true;
       } else {
-        return true;
+        const pixX = this.gridUnitToPixel(gridX, tileWidth);
+        const pixY = this.gridUnitToPixel(gridY, tileHeight);
+
+        const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+        const key = `${gridX}-${gridY}`;
+
+        explosions.push({ sprite, key });
+        this.explosionMap[key] = sprite;
+
+        return false;
       }
     };
 
-    // X to left
-    for (let i = 0; i <= range; i++) {
-      const currentX = x - i;
-      const hasFoundWall = putAndExplodeAdjacent(currentX, y);
-      if (hasFoundWall) {
+    // The bomb itself
+    putAndExplodeAdjacent(x, y);
+
+    for (let i = x + 1; i <= x + range; i++) {
+      console.log(`currentX - ${i} - ${y}`);
+      const foundObstacle = putAndExplodeAdjacent(i, y);
+      if (foundObstacle) {
         break;
-      } else {
-        this.explodeBombAt(scene, currentX, y);
       }
     }
 
-    // X to right
-    for (let i = 0; i <= range; i++) {
-      const currentX = x + i;
-      const hasFoundWall = putAndExplodeAdjacent(currentX, y);
-      if (hasFoundWall) {
+    for (let i = x - 1; i >= x - range; i--) {
+      console.log(`currentX - ${i} - ${y}`);
+      const foundObstacle = putAndExplodeAdjacent(i, y);
+      if (foundObstacle) {
         break;
-      } else {
-        this.explodeBombAt(scene, currentX, y);
       }
     }
 
-    // Y to up
-    for (let i = 0; i <= range; i++) {
-      const currentY = y - i;
-      const hasFoundWall = putAndExplodeAdjacent(x, currentY);
-      if (hasFoundWall) {
+    for (let i = y + 1; i <= y + range; i++) {
+      console.log(`currentY - ${x} - ${i}`);
+      const foundObstacle = putAndExplodeAdjacent(x, i);
+      if (foundObstacle) {
         break;
-      } else {
-        this.explodeBombAt(scene, x, currentY);
       }
     }
 
-    // Y to down
-    for (let i = 0; i <= range; i++) {
-      const currentY = y + i;
-      const hasFoundWall = putAndExplodeAdjacent(x, currentY);
-      if (hasFoundWall) {
+    for (let i = y - 1; i >= y - range; i--) {
+      console.log(`currentY - ${x} - ${i}`);
+      const foundObstacle = putAndExplodeAdjacent(x, i);
+      if (foundObstacle) {
         break;
-      } else {
-        this.explodeBombAt(scene, x, currentY);
       }
     }
 
     setTimeout(() => {
-      explosions.forEach(e => e.destroy(true));
+      explosions.forEach(({ sprite, key }) => {
+          sprite.destroy(true);
+          delete this.explosionMap[key];
+      });
     }, 1000);
   }
 
@@ -402,7 +415,7 @@ export class BombGame {
     this.socket.emit(SocketEvents.WallDestroyed, { x, y });
   }
 
-  private setupPlayerbombAt(scene: Phaser.Scene, x: number, y: number) {
+  private setupPlayerBombAt(scene: Phaser.Scene, x: number, y: number) {
     if (this.spawnedBombCount >= this.playerMaxBombSpawn) {
       return;
     } else {
@@ -441,29 +454,33 @@ export class BombGame {
     };
 
     for (const registry of Object.values(this.playerRegistry)) {
-      const collidable = scene.physics.add.existing(newBomb, true);
-      scene.physics.add.collider(registry.player, collidable);
+      const collide = scene.physics.add.existing(newBomb, true);
+      scene.physics.add.collider(registry.player, collide);
     }
   }
 
-  private explodeBombAt(scene: Phaser.Scene, x: number, y: number) {
-    const key = `${x}-${y}`;
+  private explodeBombAt(scene: Phaser.Scene, gridX: number, gridY: number) {
+    const key = `${gridX}-${gridY}`;
 
-    if (this.hasBombAt(x, y)) {
+    if (this.hasBombAt({ x: gridX, y: gridY })) {
       const bomb = this.bombMap[key];
       bomb.sprite.destroy(true);
       delete this.bombMap[key];
 
-      this.putExplosionAt(scene, x, y, bomb.range);
-
-      debug && console.debug(`Bomb exploded at x: ${x} y:${y}`);
-    } else {
-      debug && console.debug(`Bomb not found at x: ${x} y:${y}`);
+      this.putExplosionAt(scene, gridX, gridY, bomb.range);
     }
   }
 
-  private hasBombAt(x: number, y: number): boolean {
-    return `${x}-${y}` in this.bombMap;
+  private makeKey({ x, y }: SimpleCoordinates) {
+    return `${x}-${y}`;
+  }
+
+  private hasBombAt(coords: SimpleCoordinates): boolean {
+    return this.makeKey(coords) in this.bombMap;
+  }
+
+  private hasExplosionAt(coords: SimpleCoordinates): boolean {
+    return this.makeKey(coords) in this.explosionMap;
   }
 
   private findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
@@ -493,8 +510,8 @@ export class BombGame {
 
         if (cursors.space!.isDown) {
           const { x, y } = this.findPlayerMapPosition(player);
-          if (!this.hasBombAt(x, y)) {
-            this.setupPlayerbombAt(scene, x, y);
+          if (!this.hasBombAt({ x, y })) {
+            this.setupPlayerBombAt(scene, x, y);
           }
         }
       } else {
