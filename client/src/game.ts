@@ -5,6 +5,16 @@ import Socket = SocketIOClient.Socket;
 
 const debug = true;
 
+type GameSprite = Phaser.GameObjects.Sprite;
+type GameScene = Phaser.Scene;
+type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
+type BombMap = {
+  [xy: string]: {
+    sprite: GameSprite;
+    range: number;
+  };
+};
+
 interface Directions {
   left: boolean;
   right: boolean;
@@ -18,16 +28,25 @@ interface SceneMap {
   layer: Phaser.Tilemaps.DynamicTilemapLayer;
 }
 
-function inRange({
-  min,
-  max,
-  value
-}: {
-  min: number;
-  max: number;
-  value: number;
-}) {
-  return value >= min && value <= max;
+function inRange(r: { min: number; max: number; value: number }) {
+  return r.value >= r.min && r.value <= r.max;
+}
+
+function gridUnitToPixel(value: number, baseGridSize: number) {
+  return value * baseGridSize + baseGridSize / 2;
+}
+
+function makeKey({ x, y }: SimpleCoordinates) {
+  return `${x}-${y}`;
+}
+
+function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
+  const { tileWidth, tileHeight } = GameDimensions;
+  return {
+    x: Math.floor(coords.x / tileWidth),
+    // +(tileHeight / 2) is a precision fix :D
+    y: Math.floor((coords.y + tileHeight / 2) / tileHeight)
+  };
 }
 
 export class BombGame {
@@ -35,17 +54,13 @@ export class BombGame {
   private phaserInstance: Phaser.Game;
   private backgroundMap: SceneMap;
   private breakableMap: SceneMap;
+  private currentScene: GameScene;
   private wallsMap: SceneMap;
   private spawnedBombCount = 0;
   private playerMaxBombSpawn = 2;
-  private bombMap: {
-    [xy: string]: {
-      sprite: Phaser.GameObjects.Sprite;
-      range: number;
-    };
-  } = {};
+  private bombMap: BombMap = {};
   private explosionMap: {
-    [xy: string]: Phaser.GameObjects.Sprite;
+    [xy: string]: GameSprite;
   } = {};
 
   private playerRegistry: {
@@ -59,12 +74,8 @@ export class BombGame {
     this.socket = socket;
   }
 
-  private static makeDefaultTileMap(
-    scene: Phaser.Scene,
-    key: string,
-    imageName: string
-  ): SceneMap {
-    const map = scene.make.tilemap({
+  private makeDefaultTileMap(key: string, imageName: string): SceneMap {
+    const map = this.currentScene.make.tilemap({
       key,
       tileWidth: GameDimensions.tileWidth,
       tileHeight: GameDimensions.tileHeight
@@ -76,7 +87,8 @@ export class BombGame {
     return { layer, map, tiles };
   }
 
-  private static preload(scene: Phaser.Scene) {
+  private preload() {
+    const scene = this.currentScene;
     scene.load.image(MAIN_TILES, "assets/tileset.png");
     scene.load.tilemapCSV(MAPS.BACKGROUND, "assets/map_background.csv");
     scene.load.tilemapCSV(MAPS.WALLS, "assets/map_walls.csv");
@@ -131,24 +143,16 @@ export class BombGame {
     });
   }
 
-  private makeMaps(scene: Phaser.Scene) {
+  private makeMaps() {
     // Background
-    this.backgroundMap = BombGame.makeDefaultTileMap(
-      scene,
-      MAPS.BACKGROUND,
-      MAIN_TILES
-    );
+    this.backgroundMap = this.makeDefaultTileMap(MAPS.BACKGROUND, MAIN_TILES);
 
     // Walls
-    this.wallsMap = BombGame.makeDefaultTileMap(scene, MAPS.WALLS, MAIN_TILES);
+    this.wallsMap = this.makeDefaultTileMap(MAPS.WALLS, MAIN_TILES);
     this.wallsMap.map.setCollisionBetween(0, 2);
 
     // Breakables
-    this.breakableMap = BombGame.makeDefaultTileMap(
-      scene,
-      MAPS.BREAKABLES,
-      MAIN_TILES
-    );
+    this.breakableMap = this.makeDefaultTileMap(MAPS.BREAKABLES, MAIN_TILES);
     this.breakableMap.map.setCollisionBetween(0, 2);
   }
 
@@ -166,24 +170,26 @@ export class BombGame {
         }
       },
       scene: {
-        preload: function(this: Phaser.Scene) {
-          BombGame.preload(this);
+        preload: function(this: GameScene) {
+          self.currentScene = this;
+          self.preload();
         },
-        create: function(this: Phaser.Scene) {
-          self.create(this, state);
+        create: function(this: GameScene) {
+          self.currentScene = this;
+          self.create(state);
         },
-        update: function(this: Phaser.Scene) {
-          self.update(this);
+        update: function(this: GameScene) {
+          self.currentScene = this;
+          self.update();
         }
       }
     });
   }
 
   private fabricPlayer(
-    scene: Phaser.Scene,
     directions: PlayerDirections
   ): Phaser.Physics.Arcade.Sprite {
-    const player = scene.physics.add.sprite(
+    const player = this.currentScene.physics.add.sprite(
       directions.x,
       directions.y,
       ASSETS.PLAYER,
@@ -193,9 +199,9 @@ export class BombGame {
     player.setBounce(1.2);
     player.setCollideWorldBounds(true);
 
-    scene.physics.add.collider(player, this.breakableMap.layer);
+    this.currentScene.physics.add.collider(player, this.breakableMap.layer);
 
-    scene.physics.add.collider(player, this.wallsMap.layer);
+    this.currentScene.physics.add.collider(player, this.wallsMap.layer);
 
     // Make the collision height smaller
 
@@ -209,13 +215,13 @@ export class BombGame {
     return player;
   }
 
-  private initWithState(scene: Phaser.Scene, state: BackendState) {
+  private initWithState(state: BackendState) {
     const { playerRegistry } = this;
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
         directions: data.directions,
-        player: this.fabricPlayer(scene, data.directions)
+        player: this.fabricPlayer(data.directions)
       };
     }
 
@@ -224,7 +230,7 @@ export class BombGame {
     }
   }
 
-  private initSocketListeners(scene: Phaser.Scene) {
+  private initSocketListeners() {
     const { playerRegistry } = this;
 
     this.socket.on(
@@ -232,7 +238,7 @@ export class BombGame {
       (player: PlayerDirections & { id: string }) => {
         playerRegistry[player.id] = {
           directions: player,
-          player: this.fabricPlayer(scene, player)
+          player: this.fabricPlayer(player)
         };
       }
     );
@@ -254,7 +260,7 @@ export class BombGame {
     });
 
     this.socket.on(SocketEvents.NewBombAt, ({ x, y }: SimpleCoordinates) => {
-      this.setupBombAt(scene, x, y);
+      this.setupBombAt(x, y);
     });
 
     this.socket.on(
@@ -265,10 +271,11 @@ export class BombGame {
     );
   }
 
-  private create(scene: Phaser.Scene, state: BackendState) {
-    this.makeMaps(scene);
-    this.initWithState(scene, state);
-    this.initSocketListeners(scene);
+  private create(state: BackendState) {
+    this.makeMaps();
+    this.initWithState(state);
+    this.initSocketListeners();
+    const scene = this.currentScene;
 
     scene.anims.create({
       key: "left",
@@ -313,90 +320,86 @@ export class BombGame {
     return this.breakableMap.map.hasTileAt(gridX, gridY);
   }
 
-  private putExplosionAt(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    range: number
+  private putAndExplodeAdjacent(
+    cache: ExplosionCache,
+    gridX: number,
+    gridY: number
   ) {
     const { tileWidth, tileHeight } = GameDimensions;
-    const explosions: Array<{
-      sprite: Phaser.GameObjects.Sprite;
-      key: string;
-    }> = [];
-    const putAndExplodeAdjacent = (gridX: number, gridY: number) => {
-      if (this.hasBombAt({ x: gridX, y: gridY })) {
-        console.log(`Found a bomb at ${gridX} - ${gridY}, delegated to it`);
-        // Let the next bomb deal with things
-        this.explodeBombAt(scene, gridX, gridY);
-        return true;
-      } else if (this.hasExplosionAt({ x: gridX, y: gridY })) {
-        console.log(`Found a explosion at ${gridX} - ${gridY}, stopping`);
-        return true;
-      } else if (this.hasAnyWallAt(gridX, gridY)) {
-        // No Explosions at walls
 
-        if (this.hasBreakableWallAt(gridX, gridY)) {
-          // Breakable is replaced by a explosion
-          const pixX = this.gridUnitToPixel(gridX, tileWidth);
-          const pixY = this.gridUnitToPixel(gridY, tileHeight);
+    if (this.hasBombAt({ x: gridX, y: gridY })) {
+      console.log(`Found a bomb at ${gridX} - ${gridY}, delegated to it`);
+      // Let the next bomb deal with things
+      this.explodeBombAt(gridX, gridY);
+      return true;
+    } else if (this.hasExplosionAt({ x: gridX, y: gridY })) {
+      console.log(`Found a explosion at ${gridX} - ${gridY}, stopping`);
+      return true;
+    } else if (this.hasAnyWallAt(gridX, gridY)) {
+      // No Explosions at walls
 
-          const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-          const key = this.makeKey({ x: gridX, y: gridY });
+      if (this.hasBreakableWallAt(gridX, gridY)) {
+        // Breakable is replaced by a explosion
+        const pixX = gridUnitToPixel(gridX, tileWidth);
+        const pixY = gridUnitToPixel(gridY, tileHeight);
 
-          explosions.push({ sprite, key });
-          this.explosionMap[key] = sprite;
+        const sprite = this.currentScene.add.sprite(
+          pixX,
+          pixY,
+          ASSETS.EXPLOSION
+        );
+        const key = makeKey({ x: gridX, y: gridY });
 
-          this.destroyWallAt(gridX, gridY);
-          console.log(`Broke wall at ${gridX} - ${gridY}, stopping`);
-        } else {
-          console.log(`Found wall at ${gridX} - ${gridY}, stopping`);
-        }
-        return true;
-      } else {
-        const pixX = this.gridUnitToPixel(gridX, tileWidth);
-        const pixY = this.gridUnitToPixel(gridY, tileHeight);
-
-        const sprite = scene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-        const key = `${gridX}-${gridY}`;
-
-        explosions.push({ sprite, key });
+        cache.push({ sprite, key });
         this.explosionMap[key] = sprite;
 
-        return false;
+        this.destroyWallAt(gridX, gridY);
       }
-    };
+
+      return true;
+    } else {
+      const pixX = gridUnitToPixel(gridX, tileWidth);
+      const pixY = gridUnitToPixel(gridY, tileHeight);
+
+      const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+      const key = makeKey({ x: gridX, y: gridY });
+
+      cache.push({ sprite, key });
+      this.explosionMap[key] = sprite;
+
+      return false;
+    }
+  }
+
+  private putExplosionAt(x: number, y: number, range: number) {
+    const explosions: ExplosionCache = [];
 
     // The bomb itself
-    putAndExplodeAdjacent(x, y);
+    this.putAndExplodeAdjacent(explosions, x, y);
 
     for (let i = x + 1; i <= x + range; i++) {
-      console.log(`currentX - ${i} - ${y}`);
-      const foundObstacle = putAndExplodeAdjacent(i, y);
+      const foundObstacle = this.putAndExplodeAdjacent(explosions, i, y);
       if (foundObstacle) {
         break;
       }
     }
 
     for (let i = x - 1; i >= x - range; i--) {
-      console.log(`currentX - ${i} - ${y}`);
-      const foundObstacle = putAndExplodeAdjacent(i, y);
+      const foundObstacle = this.putAndExplodeAdjacent(explosions, i, y);
       if (foundObstacle) {
         break;
       }
     }
 
     for (let i = y + 1; i <= y + range; i++) {
-      console.log(`currentY - ${x} - ${i}`);
-      const foundObstacle = putAndExplodeAdjacent(x, i);
+      const foundObstacle = this.putAndExplodeAdjacent(explosions, x, i);
       if (foundObstacle) {
         break;
       }
     }
 
     for (let i = y - 1; i >= y - range; i--) {
-      console.log(`currentY - ${x} - ${i}`);
-      const foundObstacle = putAndExplodeAdjacent(x, i);
+      const foundObstacle = this.putAndExplodeAdjacent(explosions, x, i);
       if (foundObstacle) {
         break;
       }
@@ -404,8 +407,8 @@ export class BombGame {
 
     setTimeout(() => {
       explosions.forEach(({ sprite, key }) => {
-          sprite.destroy(true);
-          delete this.explosionMap[key];
+        sprite.destroy(true);
+        delete this.explosionMap[key];
       });
     }, 1000);
   }
@@ -415,38 +418,34 @@ export class BombGame {
     this.socket.emit(SocketEvents.WallDestroyed, { x, y });
   }
 
-  private setupPlayerBombAt(scene: Phaser.Scene, x: number, y: number) {
+  private setupPlayerBombAt(x: number, y: number) {
     if (this.spawnedBombCount >= this.playerMaxBombSpawn) {
       return;
     } else {
       this.spawnedBombCount++;
-      this.registerBombAt(scene, x, y);
+      this.registerBombAt(x, y);
       this.socket.emit(SocketEvents.NewBombAt, { x, y });
 
       setTimeout(() => {
-        this.explodeBombAt(scene, x, y);
+        this.explodeBombAt(x, y);
         this.spawnedBombCount--;
       }, BOMB_TIME);
     }
   }
 
-  private setupBombAt(scene: Phaser.Scene, x: number, y: number) {
-    this.registerBombAt(scene, x, y);
+  private setupBombAt(x: number, y: number) {
+    this.registerBombAt(x, y);
     setTimeout(() => {
-      this.explodeBombAt(scene, x, y);
+      this.explodeBombAt(x, y);
     }, BOMB_TIME);
   }
 
-  private gridUnitToPixel(value: number, baseGridSize: number) {
-    return value * baseGridSize + baseGridSize / 2;
-  }
-
-  private registerBombAt(scene: Phaser.Scene, x: number, y: number) {
+  private registerBombAt(x: number, y: number) {
     const { tileWidth, tileHeight } = GameDimensions;
-    const nX = this.gridUnitToPixel(x, tileWidth);
-    const nY = this.gridUnitToPixel(y, tileHeight);
-    const newBomb = scene.add.sprite(nX, nY, ASSETS.BOMB);
-    const key = `${x}-${y}`;
+    const nX = gridUnitToPixel(x, tileWidth);
+    const nY = gridUnitToPixel(y, tileHeight);
+    const newBomb = this.currentScene.add.sprite(nX, nY, ASSETS.BOMB);
+    const key = makeKey({ x, y });
 
     this.bombMap[key] = {
       sprite: newBomb,
@@ -454,45 +453,34 @@ export class BombGame {
     };
 
     for (const registry of Object.values(this.playerRegistry)) {
-      const collide = scene.physics.add.existing(newBomb, true);
-      scene.physics.add.collider(registry.player, collide);
+      const collide = this.currentScene.physics.add.existing(newBomb, true);
+      this.currentScene.physics.add.collider(registry.player, collide);
     }
   }
 
-  private explodeBombAt(scene: Phaser.Scene, gridX: number, gridY: number) {
-    const key = `${gridX}-${gridY}`;
+  private explodeBombAt(gridX: number, gridY: number) {
+    const key = makeKey({ x: gridX, y: gridY });
 
     if (this.hasBombAt({ x: gridX, y: gridY })) {
       const bomb = this.bombMap[key];
       bomb.sprite.destroy(true);
       delete this.bombMap[key];
 
-      this.putExplosionAt(scene, gridX, gridY, bomb.range);
+      this.putExplosionAt(gridX, gridY, bomb.range);
     }
   }
 
-  private makeKey({ x, y }: SimpleCoordinates) {
-    return `${x}-${y}`;
-  }
-
   private hasBombAt(coords: SimpleCoordinates): boolean {
-    return this.makeKey(coords) in this.bombMap;
+    return makeKey(coords) in this.bombMap;
   }
 
   private hasExplosionAt(coords: SimpleCoordinates): boolean {
-    return this.makeKey(coords) in this.explosionMap;
+    return makeKey(coords) in this.explosionMap;
   }
 
-  private findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
-    const { tileWidth, tileHeight } = GameDimensions;
-    return {
-      x: Math.floor(coords.x / tileWidth),
-      // +(tileHeight / 2) is a precision fix :D
-      y: Math.floor((coords.y + tileHeight / 2) / tileHeight)
-    };
-  }
+  private update() {
+    const scene = this.currentScene;
 
-  private update(scene: Phaser.Scene) {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
 
@@ -509,9 +497,9 @@ export class BombGame {
         BombGame.applyPhysicsAndAnimations(player, directions);
 
         if (cursors.space!.isDown) {
-          const { x, y } = this.findPlayerMapPosition(player);
+          const { x, y } = findPlayerMapPosition(player);
           if (!this.hasBombAt({ x, y })) {
-            this.setupPlayerBombAt(scene, x, y);
+            this.setupPlayerBombAt(x, y);
           }
         }
       } else {
