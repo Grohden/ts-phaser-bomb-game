@@ -33,8 +33,9 @@ const state: BackendState = {
 }
 
 io.on('connection', function (socket) {
-    const playerId = socket.id
+    const playerId = socket.id //socket.request.socket.remoteAddress
     const newPlayer = {
+        isDead: false,
         directions: {
             down: false,
             left: false,
@@ -47,7 +48,7 @@ io.on('connection', function (socket) {
 
     state.playerRegistry[playerId] = newPlayer
 
-    socket.emit(SocketEvents.InitWithState, state)
+    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
     socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId })
 
     socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
@@ -71,6 +72,14 @@ io.on('connection', function (socket) {
 
     socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
         state.destroyedWalls = state.destroyedWalls.concat(coordinates)
+    })
+
+    socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
+        if (deadPlayerId in state.playerRegistry) {
+            state.playerRegistry[deadPlayerId].isDead = true
+        }
+
+        socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
     })
 
 })

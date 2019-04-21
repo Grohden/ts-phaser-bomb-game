@@ -1,6 +1,13 @@
-import {BackendState, GameDimensions, PlayerDirections, SimpleCoordinates, SocketEvents} from "commons";
+import {
+  BackendState,
+  GameDimensions,
+  PlayerDirections,
+  SimpleCoordinates,
+  SocketEvents,
+  PlayerRegistry
+} from "commons";
 import Phaser from "phaser";
-import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
+import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
@@ -58,14 +65,17 @@ export class BombGame {
   private wallsMap: SceneMap;
   private spawnedBombCount = 0;
   private playerMaxBombSpawn = 2;
+  private playerId: any;
   private bombMap: BombMap = {};
-  private explosionMap: {
-    [xy: string]: GameSprite;
-  } = {};
+  private groups: {
+    players: Phaser.GameObjects.Group
+    explosions: Phaser.GameObjects.Group
+    bombs: Phaser.GameObjects.Group
+  };
+  private explosionMap: { [xy: string]: GameSprite } = {};
 
   private playerRegistry: {
-    [id: string]: {
-      directions: PlayerDirections;
+    [id: string]: PlayerRegistry & {
       player: Phaser.Physics.Arcade.Sprite;
     };
   } = {};
@@ -135,7 +145,7 @@ export class BombGame {
   }
 
   startGame() {
-    this.socket.on(SocketEvents.InitWithState, (state: BackendState) => {
+    this.socket.on(SocketEvents.InitWithState, (state: BackendState & { id: string }) => {
       // Happens at server restarts
       if (!this.phaserInstance) {
         this.initPhaser(state);
@@ -156,7 +166,7 @@ export class BombGame {
     this.breakableMap.map.setCollisionBetween(0, 2);
   }
 
-  private initPhaser(state: BackendState) {
+  private initPhaser(state: BackendState & { id: string }) {
     const self = this;
     this.phaserInstance = new Phaser.Game({
       type: Phaser.AUTO,
@@ -170,15 +180,15 @@ export class BombGame {
         }
       },
       scene: {
-        preload: function(this: GameScene) {
+        preload: function (this: GameScene) {
           self.currentScene = this;
           self.preload();
         },
-        create: function(this: GameScene) {
+        create: function (this: GameScene) {
           self.currentScene = this;
           self.create(state);
         },
-        update: function(this: GameScene) {
+        update: function (this: GameScene) {
           self.currentScene = this;
           self.update();
         }
@@ -199,12 +209,13 @@ export class BombGame {
     player.setBounce(1.2);
     player.setCollideWorldBounds(true);
 
-    this.currentScene.physics.add.collider(player, this.breakableMap.layer);
+    this.groups.players.add(player)
 
+    // TODO: put this in the group
+    this.currentScene.physics.add.collider(player, this.breakableMap.layer);
     this.currentScene.physics.add.collider(player, this.wallsMap.layer);
 
     // Make the collision height smaller
-
     const radius = GameDimensions.tileWidth / 4;
     player.body.setCircle(
       radius,
@@ -215,11 +226,18 @@ export class BombGame {
     return player;
   }
 
-  private initWithState(state: BackendState) {
+  private initWithState(state: BackendState & { id: string }) {
     const { playerRegistry } = this;
+    this.playerId = this.socket.id // state.id;
+    this.groups = {
+      players: this.currentScene.add.group(),
+      explosions: this.currentScene.add.group(),
+      bombs: this.currentScene.add.group()
+    }
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
+        isDead: data.isDead,
         directions: data.directions,
         player: this.fabricPlayer(data.directions)
       };
@@ -228,6 +246,27 @@ export class BombGame {
     for (const { x, y } of state.destroyedWalls) {
       this.breakableMap.map.removeTileAt(x, y);
     }
+
+    this.currentScene.physics.add.collider(
+      this.groups.players,
+      this.groups.bombs
+    );
+
+    this.currentScene.physics.add.collider(
+      this.groups.players,
+      this.groups.explosions,
+      (sprite: Phaser.GameObjects.GameObject) => this.processPlayerDeath(sprite)
+    );
+  }
+
+  private processPlayerDeath(playerSprite: Phaser.GameObjects.GameObject) {
+    for (const [id, registry] of Object.entries(this.playerRegistry)) {
+      // To not overload the server, only the player itself can say
+      // that he/she was killed
+      if (registry.player === playerSprite && this.playerId === id) {
+        this.socket.emit(SocketEvents.PlayerDied, id)
+      }
+    }
   }
 
   private initSocketListeners() {
@@ -235,10 +274,11 @@ export class BombGame {
 
     this.socket.on(
       SocketEvents.NewPlayer,
-      (player: PlayerDirections & { id: string }) => {
-        playerRegistry[player.id] = {
-          directions: player,
-          player: this.fabricPlayer(player)
+      (registry: PlayerRegistry & { id: string }) => {
+        playerRegistry[registry.id] = {
+          isDead: registry.isDead,
+          directions: registry.directions,
+          player: this.fabricPlayer(registry.directions)
         };
       }
     );
@@ -251,9 +291,17 @@ export class BombGame {
       }
     });
 
+    this.socket.on(SocketEvents.PlayerDied, (playerId: string) => {
+      const registry = this.playerRegistry[playerId];
+      if (registry) {
+        // registry.player.destroy(true);
+        // delete playerRegistry[playerId];
+      }
+    });
+
     this.socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
       for (const [id, data] of Object.entries(backState.playerRegistry)) {
-        if (this.socket.id !== id) {
+        if (this.playerId !== id) {
           playerRegistry[id].directions = data.directions;
         }
       }
@@ -271,7 +319,7 @@ export class BombGame {
     );
   }
 
-  private create(state: BackendState) {
+  private create(state: BackendState & { id: string }) {
     this.makeMaps();
     this.initWithState(state);
     this.initSocketListeners();
@@ -343,11 +391,9 @@ export class BombGame {
         const pixX = gridUnitToPixel(gridX, tileWidth);
         const pixY = gridUnitToPixel(gridY, tileHeight);
 
-        const sprite = this.currentScene.add.sprite(
-          pixX,
-          pixY,
-          ASSETS.EXPLOSION
-        );
+        const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+        const killer = this.currentScene.physics.add.existing(sprite, true);
+        this.groups.explosions.add(killer)
         const key = makeKey({ x: gridX, y: gridY });
 
         cache.push({ sprite, key });
@@ -362,6 +408,9 @@ export class BombGame {
       const pixY = gridUnitToPixel(gridY, tileHeight);
 
       const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+      const killer = this.currentScene.physics.add.existing(sprite, true);
+      this.groups.explosions.add(killer)
+
       const key = makeKey({ x: gridX, y: gridY });
 
       cache.push({ sprite, key });
@@ -452,10 +501,13 @@ export class BombGame {
       range: 3
     };
 
-    for (const registry of Object.values(this.playerRegistry)) {
-      const collide = this.currentScene.physics.add.existing(newBomb, true);
-      this.currentScene.physics.add.collider(registry.player, collide);
-    }
+
+    const bombCollide = this.currentScene.physics.add.existing(newBomb, true);
+    this.groups.bombs.add(bombCollide)
+
+    // for (const registry of Object.values(this.playerRegistry)) {
+    //   this.currentScene.physics.add.collider(registry.player, collide);
+    // }
   }
 
   private explodeBombAt(gridX: number, gridY: number) {
@@ -484,7 +536,7 @@ export class BombGame {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
 
-      if (this.socket.id === id) {
+      if (this.playerId === id) {
         const cursors = scene.input.keyboard.createCursorKeys();
         Object.assign(directions, {
           left: cursors.left!.isDown,
@@ -526,7 +578,7 @@ export class BombGame {
     }
 
     // Update server
-    const player = this.playerRegistry[this.socket.id];
+    const player = this.playerRegistry[this.playerId];
     if (player) {
       this.socket.emit(SocketEvents.Movement, player.directions);
     }

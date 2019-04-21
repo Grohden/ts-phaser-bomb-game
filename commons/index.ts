@@ -32,15 +32,19 @@ export const enum SocketEvents {
     Disconnect = 'disconnect',
     PlayerDisconnect = 'player_disconnect',
     StateUpdate = 'state_change',
-    WallDestroyed = 'wall_destroyed'
+    WallDestroyed = 'wall_destroyed',
+    PlayerDied = 'player_died'
 }
 
 
+export interface PlayerRegistry {
+    isDead: boolean,
+    directions: PlayerDirections
+}
+
 export interface BackendState {
     playerRegistry: {
-        [id: string]: {
-            directions: PlayerDirections
-        }
+        [id: string]: PlayerRegistry
     },
     destroyedWalls: Array<SimpleCoordinates>
 }
