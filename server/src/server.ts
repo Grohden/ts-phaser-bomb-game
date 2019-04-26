@@ -1,4 +1,4 @@
-import { BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SimpleCoordinates, SocketEvents } from 'commons'
+import {BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SimpleCoordinates, SocketEvents} from 'commons'
 import express from 'express'
 import http from 'http'
 import path from 'path'
@@ -48,8 +48,8 @@ io.on('connection', function (socket) {
 
     state.playerRegistry[playerId] = newPlayer
 
-    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
-    socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId })
+    socket.emit(SocketEvents.InitWithState, {...state, id: playerId})
+    socket.broadcast.emit(SocketEvents.NewPlayer, {...newPlayer, id: playerId})
 
     socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
         const player = state.playerRegistry[playerId]
@@ -75,6 +75,8 @@ io.on('connection', function (socket) {
     })
 
     socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
+        console.log('Player ', deadPlayerId, ' died');
+
         if (deadPlayerId in state.playerRegistry) {
             state.playerRegistry[deadPlayerId].isDead = true
         }

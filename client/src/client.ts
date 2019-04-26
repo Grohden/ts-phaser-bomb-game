@@ -1,5 +1,5 @@
 import io from "socket.io-client";
-import { BombGame } from "./game";
+import {BombGame} from "./game";
 
 function startGame() {
   try {
@@ -11,5 +11,13 @@ function startGame() {
 }
 
 window.onload = function() {
-  startGame();
+  const startGameButton = <HTMLButtonElement>(
+    document.getElementById("start-button")
+  );
+
+  startGameButton.onclick = function() {
+    document.body.className = "";
+    document.body.classList.add("state-waiting");
+    startGame();
+  };
 };

@@ -1,13 +1,6 @@
-import {
-  BackendState,
-  GameDimensions,
-  PlayerDirections,
-  SimpleCoordinates,
-  SocketEvents,
-  PlayerRegistry
-} from "commons";
+import {BackendState, GameDimensions, PlayerDirections, PlayerRegistry, SimpleCoordinates, SocketEvents} from "commons";
 import Phaser from "phaser";
-import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
+import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
@@ -68,9 +61,9 @@ export class BombGame {
   private playerId: any;
   private bombMap: BombMap = {};
   private groups: {
-    players: Phaser.GameObjects.Group
-    explosions: Phaser.GameObjects.Group
-    bombs: Phaser.GameObjects.Group
+    players: Phaser.GameObjects.Group;
+    explosions: Phaser.GameObjects.Group;
+    bombs: Phaser.GameObjects.Group;
   };
   private explosionMap: { [xy: string]: GameSprite } = {};
 
@@ -145,12 +138,15 @@ export class BombGame {
   }
 
   startGame() {
-    this.socket.on(SocketEvents.InitWithState, (state: BackendState & { id: string }) => {
-      // Happens at server restarts
-      if (!this.phaserInstance) {
-        this.initPhaser(state);
+    this.socket.on(
+      SocketEvents.InitWithState,
+      (state: BackendState & { id: string }) => {
+        // Happens at server restarts
+        if (!this.phaserInstance) {
+          this.initPhaser(state);
+        }
       }
-    });
+    );
   }
 
   private makeMaps() {
@@ -180,15 +176,15 @@ export class BombGame {
         }
       },
       scene: {
-        preload: function (this: GameScene) {
+        preload: function(this: GameScene) {
           self.currentScene = this;
           self.preload();
         },
-        create: function (this: GameScene) {
+        create: function(this: GameScene) {
           self.currentScene = this;
           self.create(state);
         },
-        update: function (this: GameScene) {
+        update: function(this: GameScene) {
           self.currentScene = this;
           self.update();
         }
@@ -209,7 +205,7 @@ export class BombGame {
     player.setBounce(1.2);
     player.setCollideWorldBounds(true);
 
-    this.groups.players.add(player)
+    this.groups.players.add(player);
 
     // TODO: put this in the group
     this.currentScene.physics.add.collider(player, this.breakableMap.layer);
@@ -228,12 +224,12 @@ export class BombGame {
 
   private initWithState(state: BackendState & { id: string }) {
     const { playerRegistry } = this;
-    this.playerId = this.socket.id // state.id;
+    this.playerId = this.socket.id; // state.id;
     this.groups = {
       players: this.currentScene.add.group(),
       explosions: this.currentScene.add.group(),
       bombs: this.currentScene.add.group()
-    }
+    };
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
@@ -263,8 +259,9 @@ export class BombGame {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       // To not overload the server, only the player itself can say
       // that he/she was killed
-      if (registry.player === playerSprite && this.playerId === id) {
-        this.socket.emit(SocketEvents.PlayerDied, id)
+      if (!registry.isDead && registry.player === playerSprite && this.playerId === id) {
+        registry.isDead = true;
+        this.socket.emit(SocketEvents.PlayerDied, id);
       }
     }
   }
@@ -391,9 +388,13 @@ export class BombGame {
         const pixX = gridUnitToPixel(gridX, tileWidth);
         const pixY = gridUnitToPixel(gridY, tileHeight);
 
-        const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+        const sprite = this.currentScene.add.sprite(
+          pixX,
+          pixY,
+          ASSETS.EXPLOSION
+        );
         const killer = this.currentScene.physics.add.existing(sprite, true);
-        this.groups.explosions.add(killer)
+        this.groups.explosions.add(killer);
         const key = makeKey({ x: gridX, y: gridY });
 
         cache.push({ sprite, key });
@@ -409,7 +410,7 @@ export class BombGame {
 
       const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
       const killer = this.currentScene.physics.add.existing(sprite, true);
-      this.groups.explosions.add(killer)
+      this.groups.explosions.add(killer);
 
       const key = makeKey({ x: gridX, y: gridY });
 
@@ -501,13 +502,8 @@ export class BombGame {
       range: 3
     };
 
-
     const bombCollide = this.currentScene.physics.add.existing(newBomb, true);
-    this.groups.bombs.add(bombCollide)
-
-    // for (const registry of Object.values(this.playerRegistry)) {
-    //   this.currentScene.physics.add.collider(registry.player, collide);
-    // }
+    this.groups.bombs.add(bombCollide);
   }
 
   private explodeBombAt(gridX: number, gridY: number) {
@@ -536,7 +532,7 @@ export class BombGame {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
 
-      if (this.playerId === id) {
+      if (this.playerId === id && !this.playerRegistry[id].isDead) {
         const cursors = scene.input.keyboard.createCursorKeys();
         Object.assign(directions, {
           left: cursors.left!.isDown,
