@@ -22,6 +22,12 @@ interface Directions {
   up: boolean;
 }
 
+interface BombGameConfigs {
+  parent: HTMLElement | string;
+  onDeath: () => unknown;
+  onStart: () => unknown;
+}
+
 interface SceneMap {
   map: Phaser.Tilemaps.Tilemap;
   tiles: Phaser.Tilemaps.Tileset;
@@ -51,6 +57,7 @@ function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
 
 export class BombGame {
   private socket: Socket;
+  private gameConfigs: BombGameConfigs;
   private phaserInstance: Phaser.Game;
   private backgroundMap: SceneMap;
   private breakableMap: SceneMap;
@@ -73,8 +80,9 @@ export class BombGame {
     };
   } = {};
 
-  constructor(socket: Socket) {
+  constructor(socket: Socket, gameConfigs: BombGameConfigs) {
     this.socket = socket;
+    this.gameConfigs = gameConfigs;
   }
 
   private makeDefaultTileMap(key: string, imageName: string): SceneMap {
@@ -166,6 +174,7 @@ export class BombGame {
     const self = this;
     this.phaserInstance = new Phaser.Game({
       type: Phaser.AUTO,
+      parent: self.gameConfigs.parent,
       width: GameDimensions.gameWidth,
       height: GameDimensions.gameHeight,
       physics: {
@@ -183,6 +192,7 @@ export class BombGame {
         create: function(this: GameScene) {
           self.currentScene = this;
           self.create(state);
+          self.gameConfigs.onStart();
         },
         update: function(this: GameScene) {
           self.currentScene = this;
@@ -259,9 +269,14 @@ export class BombGame {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       // To not overload the server, only the player itself can say
       // that he/she was killed
-      if (!registry.isDead && registry.player === playerSprite && this.playerId === id) {
+      if (
+        !registry.isDead &&
+        registry.player === playerSprite &&
+        this.playerId === id
+      ) {
         registry.isDead = true;
         this.socket.emit(SocketEvents.PlayerDied, id);
+        this.gameConfigs.onDeath();
       }
     }
   }
@@ -532,17 +547,30 @@ export class BombGame {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
 
-      if (this.playerId === id && !this.playerRegistry[id].isDead) {
+      if (this.playerId === id) {
         const cursors = scene.input.keyboard.createCursorKeys();
-        Object.assign(directions, {
-          left: cursors.left!.isDown,
-          right: cursors.right!.isDown,
-          down: cursors.up!.isDown,
-          up: cursors.down!.isDown,
-          x: player.x,
-          y: player.y
-        });
-        BombGame.applyPhysicsAndAnimations(player, directions);
+
+        if(this.playerRegistry[id].isDead){
+          Object.assign(directions, {
+            left: false,
+            right: false,
+            down: false,
+            up: false,
+            x: player.x,
+            y: player.y
+          });
+        } else {
+          Object.assign(directions, {
+            left: cursors.left!.isDown,
+            right: cursors.right!.isDown,
+            down: cursors.up!.isDown,
+            up: cursors.down!.isDown,
+            x: player.x,
+            y: player.y
+          });
+        }
+
+        // BombGame.applyPhysicsAndAnimations(player, directions);
 
         if (cursors.space!.isDown) {
           const { x, y } = findPlayerMapPosition(player);
@@ -550,26 +578,25 @@ export class BombGame {
             this.setupPlayerBombAt(x, y);
           }
         }
-      } else {
-        // Fixes some position imprecision (from player animations)
-        const tolerance = 10;
-        const isXOk = inRange({
-          min: directions.x - tolerance,
-          max: directions.x + tolerance,
-          value: player.x
-        });
-        const isYOk = inRange({
-          min: directions.y - tolerance,
-          max: directions.y + tolerance,
-          value: player.y
-        });
+      }
+      // Fixes some position imprecision (from player animations)
+      const tolerance = 10;
+      const isXOk = inRange({
+        min: directions.x - tolerance,
+        max: directions.x + tolerance,
+        value: player.x
+      });
+      const isYOk = inRange({
+        min: directions.y - tolerance,
+        max: directions.y + tolerance,
+        value: player.y
+      });
 
-        if (!isXOk || !isYOk) {
-          player.x = directions.x;
-          player.y = directions.y;
-        } else {
-          BombGame.applyPhysicsAndAnimations(player, directions);
-        }
+      if (!isXOk || !isYOk) {
+        player.x = directions.x;
+        player.y = directions.y;
+      } else {
+        BombGame.applyPhysicsAndAnimations(player, directions);
       }
     }
 
