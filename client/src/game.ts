@@ -222,7 +222,7 @@ export class BombGame {
     this.currentScene.physics.add.collider(player, this.wallsMap.layer);
 
     // Make the collision height smaller
-    const radius = GameDimensions.tileWidth / 4;
+    const radius = GameDimensions.playerBoxRadius;
     player.body.setCircle(
       radius,
       (GameDimensions.playerWidth - radius * 2) / 2,
@@ -243,8 +243,7 @@ export class BombGame {
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
-        isDead: data.isDead,
-        directions: data.directions,
+        ...data,
         player: this.fabricPlayer(data.directions)
       };
     }
@@ -288,8 +287,7 @@ export class BombGame {
       SocketEvents.NewPlayer,
       (registry: PlayerRegistry & { id: string }) => {
         playerRegistry[registry.id] = {
-          isDead: registry.isDead,
-          directions: registry.directions,
+          ...registry,
           player: this.fabricPlayer(registry.directions)
         };
       }

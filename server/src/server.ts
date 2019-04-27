@@ -1,4 +1,11 @@
-import {BackendState, PlayerDirections, SERVER_UPDATE_INTERVAL, SimpleCoordinates, SocketEvents} from 'commons'
+import {
+    BackendState,
+    GameDimensions,
+    PlayerDirections,
+    SERVER_UPDATE_INTERVAL,
+    SimpleCoordinates,
+    SocketEvents
+} from 'commons'
 import express from 'express'
 import http from 'http'
 import path from 'path'
@@ -28,28 +35,76 @@ server.listen(5000, function () {
 
 
 const state: BackendState = {
+    slots: {},
     playerRegistry: {},
     destroyedWalls: []
 };
 
+
+function findAvailablePosition(): SimpleCoordinates & { slot: keyof BackendState['slots'] } | undefined {
+    console.log(GameDimensions.playerBoxRadius);
+    const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2);
+    const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2);
+
+    if (!state.slots.first) {
+        return {
+            slot: 'first',
+            x: centerXOffset,
+            y: centerYOffset
+        }
+    }
+
+    if (!state.slots.second) {
+        return {
+            slot: 'second',
+            x: GameDimensions.gameWidth - centerXOffset,
+            y: centerYOffset
+        }
+    }
+
+    if (!state.slots.third) {
+        return {
+            slot: 'third',
+            x: centerXOffset,
+            y: GameDimensions.gameHeight - centerYOffset
+        }
+    }
+
+    if (!state.slots.fourth) {
+        return {
+            slot: 'fourth',
+            x: GameDimensions.gameWidth - centerXOffset,
+            y: GameDimensions.gameHeight - centerYOffset
+        }
+    }
+}
+
 io.on('connection', function (socket) {
     const playerId = socket.id; //socket.request.socket.remoteAddress
-    const newPlayer = {
-        isDead: false,
-        directions: {
-            down: false,
-            left: false,
-            right: false,
-            up: false,
-            x: 0,
-            y: 0
-        }
-    };
 
-    state.playerRegistry[playerId] = newPlayer;
+    const position = findAvailablePosition();
+    if (position) {
+        const newPlayer = {
+            isDead: false,
+            slot: position.slot,
+            directions: {
+                down: false,
+                left: false,
+                right: false,
+                up: false,
+                ...position
+            }
+        };
 
-    socket.emit(SocketEvents.InitWithState, {...state, id: playerId});
-    socket.broadcast.emit(SocketEvents.NewPlayer, {...newPlayer, id: playerId});
+        console.log(`New player ${playerId} joins at x ${newPlayer.directions.x} y ${newPlayer.directions.x} on slot ${[position.slot]}`);
+        state.slots[newPlayer.slot] = position;
+        state.playerRegistry[playerId] = newPlayer;
+
+        socket.emit(SocketEvents.InitWithState, {...state, id: playerId});
+        socket.broadcast.emit(SocketEvents.NewPlayer, {...newPlayer, id: playerId});
+    } else {
+        socket.emit(SocketEvents.InitWithState, {...state, id: playerId});
+    }
 
     socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
         const player = state.playerRegistry[playerId];
@@ -59,8 +114,10 @@ io.on('connection', function (socket) {
     });
 
     socket.on(SocketEvents.Disconnect, () => {
-        if (playerId in state.playerRegistry) {
-            delete state.playerRegistry[playerId]
+        const player = state.playerRegistry[playerId];
+        if (player) {
+            delete state.slots[player.slot];
+            delete state.playerRegistry[playerId];
         }
 
         io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
