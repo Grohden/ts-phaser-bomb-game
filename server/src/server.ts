@@ -19,7 +19,7 @@ const clientPath = '../../client';
 
 app.set('port', 5000);
 
-app.use('/static', express.static(path.resolve(__dirname, clientPath, 'build')));
+app.use('/', express.static(path.resolve(__dirname, clientPath, 'build')));
 
 app.use('/assets', express.static(path.resolve(__dirname, clientPath, 'build/assets')));
 
