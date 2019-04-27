@@ -21,7 +21,7 @@ app.set('port', 5000);
 
 app.use('/static', express.static(path.resolve(__dirname, clientPath, 'build')));
 
-app.use('/assets', express.static(path.resolve(__dirname, clientPath,'build/assets')));
+app.use('/assets', express.static(path.resolve(__dirname, clientPath, 'build/assets')));
 
 // Routing
 app.get('/', function (request, response) {
@@ -42,48 +42,54 @@ const state: BackendState = {
 };
 
 
-function findAvailablePosition(): SimpleCoordinates & { slot: keyof BackendState['slots'] } | undefined {
-    console.log(GameDimensions.playerBoxRadius);
+type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
+function findRandomSlot(): TRandomSlot | undefined {
     const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2);
     const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2);
+    const availableSlots: TRandomSlot[] = [];
 
     if (!state.slots.first) {
-        return {
+        availableSlots.push({
             slot: 'first',
             x: centerXOffset,
             y: centerYOffset
-        }
+        })
     }
 
     if (!state.slots.second) {
-        return {
+        availableSlots.push({
             slot: 'second',
             x: GameDimensions.gameWidth - centerXOffset,
             y: centerYOffset
-        }
+        })
     }
 
     if (!state.slots.third) {
-        return {
+        availableSlots.push({
             slot: 'third',
             x: centerXOffset,
             y: GameDimensions.gameHeight - centerYOffset
-        }
+        })
     }
 
     if (!state.slots.fourth) {
-        return {
+        availableSlots.push({
             slot: 'fourth',
             x: GameDimensions.gameWidth - centerXOffset,
             y: GameDimensions.gameHeight - centerYOffset
-        }
+        })
+    }
+
+
+    if(availableSlots.length >= 1){
+        return availableSlots[Math.floor(Math.random()*availableSlots.length)];
     }
 }
 
 io.on('connection', function (socket) {
     const playerId = socket.id; //socket.request.socket.remoteAddress
 
-    const position = findAvailablePosition();
+    const position = findRandomSlot();
     if (position) {
         const newPlayer = {
             isDead: false,

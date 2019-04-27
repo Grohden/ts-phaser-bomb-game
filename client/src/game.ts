@@ -378,6 +378,28 @@ export class BombGame {
     return this.breakableMap.map.hasTileAt(gridX, gridY);
   }
 
+  private addExplosionSprite({
+    pixX,
+    pixY,
+    gridX,
+    gridY
+  }: {
+    pixX: number;
+    pixY: number;
+    gridX: number;
+    gridY: number;
+  }): { key: string; sprite: GameSprite } {
+    const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
+    const killer = this.currentScene.physics.add.existing(sprite, true);
+    const physicsBody = (killer.body as unknown as Phaser.Physics.Arcade.Body);
+    physicsBody.setCircle(GameDimensions.tileHeight / 2);
+
+    this.groups.explosions.add(killer);
+    const key = makeKey({ x: gridX, y: gridY });
+
+    return { key, sprite };
+  }
+
   private putAndExplodeAdjacent(
     cache: ExplosionCache,
     gridX: number,
@@ -401,15 +423,12 @@ export class BombGame {
         const pixX = gridUnitToPixel(gridX, tileWidth);
         const pixY = gridUnitToPixel(gridY, tileHeight);
 
-        const sprite = this.currentScene.add.sprite(
+        const { key, sprite } = this.addExplosionSprite({
           pixX,
           pixY,
-          ASSETS.EXPLOSION
-        );
-        const killer = this.currentScene.physics.add.existing(sprite, true);
-        this.groups.explosions.add(killer);
-        const key = makeKey({ x: gridX, y: gridY });
-
+          gridX,
+          gridY
+        });
         cache.push({ sprite, key });
         this.explosionMap[key] = sprite;
 
@@ -421,11 +440,12 @@ export class BombGame {
       const pixX = gridUnitToPixel(gridX, tileWidth);
       const pixY = gridUnitToPixel(gridY, tileHeight);
 
-      const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-      const killer = this.currentScene.physics.add.existing(sprite, true);
-      this.groups.explosions.add(killer);
-
-      const key = makeKey({ x: gridX, y: gridY });
+      const { key, sprite } = this.addExplosionSprite({
+        pixX,
+        pixY,
+        gridX,
+        gridY
+      });
 
       cache.push({ sprite, key });
       this.explosionMap[key] = sprite;
@@ -473,7 +493,7 @@ export class BombGame {
         sprite.destroy(true);
         delete this.explosionMap[key];
       });
-    }, 1000);
+    }, 700);
   }
 
   private destroyWallAt(x: number, y: number) {
@@ -548,7 +568,7 @@ export class BombGame {
       if (this.playerId === id) {
         const cursors = scene.input.keyboard.createCursorKeys();
 
-        if(this.playerRegistry[id].isDead){
+        if (this.playerRegistry[id].isDead) {
           Object.assign(directions, {
             left: false,
             right: false,
