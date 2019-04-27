@@ -15,16 +15,17 @@ import socketIO from 'socket.io'
 const app = express();
 const server = new http.Server(app);
 const io = socketIO(server);
+const clientPath = '../../client';
 
 app.set('port', 5000);
 
-app.use('/static', express.static(__dirname + '/static'));
+app.use('/static', express.static(path.resolve(__dirname, clientPath, 'build')));
 
-app.use('/assets', express.static(__dirname + '/static/assets'));
+app.use('/assets', express.static(path.resolve(__dirname, clientPath,'build/assets')));
 
 // Routing
 app.get('/', function (request, response) {
-    response.sendFile(path.join(__dirname, '/static/index.html'))
+    response.sendFile(path.resolve(__dirname, clientPath, 'build/index.html'))
 });
 
 // Starts the server.

@@ -6,13 +6,15 @@ export interface SimpleCoordinates {
     y: number
 }
 
+const tileWidth = 36
 export const GameDimensions = {
     gameWidth: 540,
     gameHeight: 540,
     playerWidth: 32,
     playerHeight: 48,
-    tileWidth: 36,
-    tileHeight: 36
+    tileWidth: tileWidth,
+    tileHeight: 36,
+    playerBoxRadius: tileWidth / 4
 }
 
 export interface PlayerDirections {
@@ -36,13 +38,19 @@ export const enum SocketEvents {
     PlayerDied = 'player_died'
 }
 
-
 export interface PlayerRegistry {
     isDead: boolean,
+    slot: keyof BackendState['slots']
     directions: PlayerDirections
 }
 
 export interface BackendState {
+    slots: {
+        first?: SimpleCoordinates,
+        second?: SimpleCoordinates,
+        third?: SimpleCoordinates,
+        fourth?: SimpleCoordinates
+    }
     playerRegistry: {
         [id: string]: PlayerRegistry
     },

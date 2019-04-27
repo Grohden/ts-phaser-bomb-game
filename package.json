@@ -9,6 +9,7 @@
     "prettier": "prettier --write \"{client, server, commons}/**/*.ts\"",
     "bootstrap": "lerna bootstrap --hoist",
     "build": "lerna run build --stream",
+    "fresh": "npm run start:fresh",
     "start:fresh": "npm run build && npm run start:server",
     "start:client": "cd client/ && npm run start",
     "start:server": "cd server/ && npm run start"
