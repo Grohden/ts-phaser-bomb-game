@@ -40,6 +40,10 @@ export const enum SocketEvents {
 
 export interface PlayerRegistry {
     isDead: boolean,
+    status: {
+        maxBombCount: number,
+        bombRange: number
+    }
     slot: keyof BackendState['slots']
     directions: PlayerDirections
 }

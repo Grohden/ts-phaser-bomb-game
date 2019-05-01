@@ -1,18 +1,12 @@
-import {
-  BackendState,
-  GameDimensions,
-  PlayerDirections,
-  PlayerRegistry,
-  SimpleCoordinates,
-  SocketEvents
-} from "commons";
+import {BackendState, GameDimensions, PlayerDirections, PlayerRegistry, SimpleCoordinates, SocketEvents} from "commons";
 import Phaser from "phaser";
-import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
+import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
 
 type GameSprite = Phaser.GameObjects.Sprite;
+type GamePhysicsSprite = Phaser.Physics.Arcade.Sprite;
 type GameScene = Phaser.Scene;
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
@@ -118,18 +112,18 @@ export class BombGame {
     });
 
     scene.load.spritesheet(ASSETS.BOMB, "assets/bomb.png", {
-      frameWidth: GameDimensions.playerWidth,
-      frameHeight: GameDimensions.playerHeight
+      frameWidth: GameDimensions.tileWidth,
+      frameHeight: GameDimensions.tileHeight
     });
 
     scene.load.spritesheet(ASSETS.EXPLOSION, "assets/explosion.png", {
-      frameWidth: GameDimensions.playerWidth,
-      frameHeight: GameDimensions.playerHeight
+      frameWidth: GameDimensions.tileWidth,
+      frameHeight: GameDimensions.tileHeight
     });
   }
 
   private static applyPhysicsAndAnimations(
-    sprite: Phaser.Physics.Arcade.Sprite,
+    sprite: GamePhysicsSprite,
     { left, right, down, up }: Directions
   ) {
     const velocity = 160;
@@ -275,6 +269,7 @@ export class BombGame {
       this.groups.explosions,
       (sprite: Phaser.GameObjects.GameObject) => this.processPlayerDeath(sprite)
     );
+
   }
 
   private processPlayerDeath(playerSprite: Phaser.GameObjects.GameObject) {
@@ -348,6 +343,18 @@ export class BombGame {
     this.initSocketListeners();
     const scene = this.currentScene;
 
+
+      scene.anims.create({
+        key: "bomb-animation",
+        frames: scene.anims.generateFrameNumbers(ASSETS.BOMB, {
+          start: 0,
+          end: 1
+        }),
+        frameRate: 2,
+        repeat: -1
+      });
+
+      // Player animations
     scene.anims.create({
       key: "left",
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
@@ -555,7 +562,7 @@ export class BombGame {
     const { tileWidth, tileHeight } = GameDimensions;
     const nX = gridUnitToPixel(x, tileWidth);
     const nY = gridUnitToPixel(y, tileHeight);
-    const newBomb = this.currentScene.add.sprite(nX, nY, ASSETS.BOMB);
+    const newBomb = this.currentScene.add.sprite(nX, nY, ASSETS.BOMB, 1);
     const key = makeKey({ x, y });
 
     this.bombMap[key] = { sprite: newBomb, range };
@@ -586,6 +593,10 @@ export class BombGame {
 
   private update() {
     const scene = this.currentScene;
+
+    for(const child of this.groups.bombs.children.entries){
+      (child as GameSprite).anims.play("bomb-animation", true);
+    }
 
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
