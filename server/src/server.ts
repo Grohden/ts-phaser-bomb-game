@@ -4,7 +4,8 @@ import {
     PlayerDirections,
     SERVER_UPDATE_INTERVAL,
     SimpleCoordinates,
-    SocketEvents
+    SocketEvents,
+    PlayerRegistry
 } from 'commons'
 import express from 'express'
 import http from 'http'
@@ -91,9 +92,13 @@ io.on('connection', function (socket) {
 
     const position = findRandomSlot();
     if (position) {
-        const newPlayer = {
+        const newPlayer: PlayerRegistry = {
             isDead: false,
             slot: position.slot,
+            status: {
+              bombRange: 2,
+              maxBombCount: 1
+            },
             directions: {
                 down: false,
                 left: false,
@@ -131,7 +136,14 @@ io.on('connection', function (socket) {
     });
 
     socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
-        socket.broadcast.emit(SocketEvents.NewBombAt, coords)
+        const player = state.playerRegistry[playerId];
+
+        if(player){
+            socket.broadcast.emit(SocketEvents.NewBombAt, {
+                ...coords,
+                range: player.status.bombRange
+            })
+        }
     });
 
     socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {

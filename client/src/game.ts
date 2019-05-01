@@ -1,6 +1,13 @@
-import {BackendState, GameDimensions, PlayerDirections, PlayerRegistry, SimpleCoordinates, SocketEvents} from "commons";
+import {
+  BackendState,
+  GameDimensions,
+  PlayerDirections,
+  PlayerRegistry,
+  SimpleCoordinates,
+  SocketEvents
+} from "commons";
 import Phaser from "phaser";
-import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
+import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
@@ -34,6 +41,8 @@ interface SceneMap {
   layer: Phaser.Tilemaps.DynamicTilemapLayer;
 }
 
+type TNewBombInfo = SimpleCoordinates & { range: number };
+
 function inRange(r: { min: number; max: number; value: number }) {
   return r.value >= r.min && r.value <= r.max;
 }
@@ -64,7 +73,6 @@ export class BombGame {
   private currentScene: GameScene;
   private wallsMap: SceneMap;
   private spawnedBombCount = 0;
-  private playerMaxBombSpawn = 2;
   private playerId: any;
   private bombMap: BombMap = {};
   private groups: {
@@ -145,7 +153,7 @@ export class BombGame {
       sprite.setVelocityY(0);
     }
 
-    if(!down && !up && !left && !right){
+    if (!down && !up && !left && !right) {
       sprite.anims.play("turn-up");
     }
   }
@@ -322,8 +330,8 @@ export class BombGame {
       }
     });
 
-    this.socket.on(SocketEvents.NewBombAt, ({ x, y }: SimpleCoordinates) => {
-      this.setupBombAt(x, y);
+    this.socket.on(SocketEvents.NewBombAt, (info: TNewBombInfo) => {
+      this.setupBombAt(info);
     });
 
     this.socket.on(
@@ -367,7 +375,7 @@ export class BombGame {
         end: 11
       }),
       frameRate: 5,
-      repeat: -1,
+      repeat: -1
     });
 
     scene.anims.create({
@@ -405,7 +413,7 @@ export class BombGame {
   }): { key: string; sprite: GameSprite } {
     const sprite = this.currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
     const killer = this.currentScene.physics.add.existing(sprite, true);
-    const physicsBody = (killer.body as unknown as Phaser.Physics.Arcade.Body);
+    const physicsBody = (killer.body as unknown) as Phaser.Physics.Arcade.Body;
     physicsBody.setCircle(GameDimensions.tileHeight / 2);
 
     this.groups.explosions.add(killer);
@@ -515,12 +523,18 @@ export class BombGame {
     this.socket.emit(SocketEvents.WallDestroyed, { x, y });
   }
 
+  private getCurrentPlayer() {
+    return this.playerRegistry[this.playerId];
+  }
+
   private setupPlayerBombAt(x: number, y: number) {
-    if (this.spawnedBombCount >= this.playerMaxBombSpawn) {
+    const player = this.getCurrentPlayer();
+
+    if (this.spawnedBombCount >= player.status.maxBombCount) {
       return;
     } else {
       this.spawnedBombCount++;
-      this.registerBombAt(x, y);
+      this.registerBombAt(x, y, player.status.bombRange);
       this.socket.emit(SocketEvents.NewBombAt, { x, y });
 
       setTimeout(() => {
@@ -530,24 +544,21 @@ export class BombGame {
     }
   }
 
-  private setupBombAt(x: number, y: number) {
-    this.registerBombAt(x, y);
+  private setupBombAt({ x, y, range }: TNewBombInfo) {
+    this.registerBombAt(x, y, range);
     setTimeout(() => {
       this.explodeBombAt(x, y);
     }, BOMB_TIME);
   }
 
-  private registerBombAt(x: number, y: number) {
+  private registerBombAt(x: number, y: number, range: number) {
     const { tileWidth, tileHeight } = GameDimensions;
     const nX = gridUnitToPixel(x, tileWidth);
     const nY = gridUnitToPixel(y, tileHeight);
     const newBomb = this.currentScene.add.sprite(nX, nY, ASSETS.BOMB);
     const key = makeKey({ x, y });
 
-    this.bombMap[key] = {
-      sprite: newBomb,
-      range: 3
-    };
+    this.bombMap[key] = { sprite: newBomb, range };
 
     const bombCollide = this.currentScene.physics.add.existing(newBomb, true);
     this.groups.bombs.add(bombCollide);
