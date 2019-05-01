@@ -133,15 +133,20 @@ export class BombGame {
       sprite.anims.play("right", true);
     } else {
       sprite.setVelocityX(0);
-      sprite.anims.play("turn");
     }
 
     if (down) {
       sprite.setVelocityY(-velocity);
+      sprite.anims.play("turn-down", true);
     } else if (up) {
       sprite.setVelocityY(velocity);
+      sprite.anims.play("turn-up", true);
     } else {
       sprite.setVelocityY(0);
+    }
+
+    if(!down && !up && !left && !right){
+      sprite.anims.play("turn-up");
     }
   }
 
@@ -346,23 +351,32 @@ export class BombGame {
     });
 
     scene.anims.create({
-      key: "turn",
-      frames: [
-        {
-          key: ASSETS.PLAYER,
-          frame: 4
-        }
-      ],
-      frameRate: 20
+      key: "right",
+      frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
+        start: 4,
+        end: 7
+      }),
+      frameRate: 10,
+      repeat: -1
     });
 
     scene.anims.create({
-      key: "right",
+      key: "turn-up",
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
-        start: 5,
-        end: 8
+        start: 10,
+        end: 11
       }),
-      frameRate: 10,
+      frameRate: 5,
+      repeat: -1,
+    });
+
+    scene.anims.create({
+      key: "turn-down",
+      frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
+        start: 8,
+        end: 9
+      }),
+      frameRate: 5,
       repeat: -1
     });
   }
