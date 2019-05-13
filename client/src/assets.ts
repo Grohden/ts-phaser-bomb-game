@@ -5,7 +5,8 @@ export const BOMB_TIME = 2000;
 export const ASSETS = {
   PLAYER: "dude",
   BOMB: "bomb",
-  EXPLOSION: "explosion"
+  EXPLOSION: "explosion",
+  BOMB_COUNT_POWERUP: "bomb_count_powerup"
 };
 
 export const MAPS = {

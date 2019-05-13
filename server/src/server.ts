@@ -3,6 +3,7 @@ import {
     GameDimensions,
     PlayerDirections,
     SERVER_UPDATE_INTERVAL,
+    TPowerUpInfo,
     SimpleCoordinates,
     SocketEvents,
     PlayerRegistry
@@ -147,7 +148,14 @@ io.on('connection', function (socket) {
     });
 
     socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
-        state.destroyedWalls = state.destroyedWalls.concat(coordinates)
+        state.destroyedWalls = state.destroyedWalls.concat(coordinates);
+
+        const npAt: TPowerUpInfo = {
+            ...coordinates,
+            powerUpType:"BombQuantity"
+        };
+
+        socket.emit(SocketEvents.NewPowerUpAt, npAt)
     });
 
     socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {

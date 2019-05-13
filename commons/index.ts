@@ -35,7 +35,12 @@ export const enum SocketEvents {
     PlayerDisconnect = 'player_disconnect',
     StateUpdate = 'state_change',
     WallDestroyed = 'wall_destroyed',
-    PlayerDied = 'player_died'
+    PlayerDied = 'player_died',
+    NewPowerUpAt = 'new_power_up'
+}
+
+export type TPowerUpInfo = SimpleCoordinates & {
+    powerUpType: 'BombQuantity' | 'BombRange'
 }
 
 export interface PlayerRegistry {

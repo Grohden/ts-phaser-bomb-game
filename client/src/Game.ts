@@ -1,13 +1,21 @@
-import {BackendState, GameDimensions, PlayerDirections, PlayerRegistry, SimpleCoordinates, SocketEvents} from "commons";
+import {
+  BackendState,
+  GameDimensions,
+  PlayerDirections,
+  PlayerRegistry,
+  SimpleCoordinates,
+  SocketEvents,
+  TPowerUpInfo
+} from "commons";
 import Phaser from "phaser";
-import {ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
+import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
+import { GameObject, GamePhysicsSprite, GameScene, GameSprite } from "./alias";
+import { GroupManager } from "./GroupManager";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
 
-type GameSprite = Phaser.GameObjects.Sprite;
-type GamePhysicsSprite = Phaser.Physics.Arcade.Sprite;
-type GameScene = Phaser.Scene;
+
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
   [xy: string]: {
@@ -46,7 +54,7 @@ function gridUnitToPixel(value: number, baseGridSize: number) {
 }
 
 function makeKey({ x, y }: SimpleCoordinates) {
-  return `${x}-${y}`;
+  return `${ x }-${ y }`;
 }
 
 function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
@@ -69,11 +77,7 @@ export class BombGame {
   private spawnedBombCount = 0;
   private playerId: any;
   private bombMap: BombMap = {};
-  private groups: {
-    players: Phaser.GameObjects.Group;
-    explosions: Phaser.GameObjects.Group;
-    bombs: Phaser.GameObjects.Group;
-  };
+  private groups: GroupManager;
   private explosionMap: { [xy: string]: GameSprite } = {};
 
   private playerRegistry: {
@@ -111,14 +115,15 @@ export class BombGame {
       frameHeight: GameDimensions.playerHeight
     });
 
-    scene.load.spritesheet(ASSETS.BOMB, "assets/bomb.png", {
-      frameWidth: GameDimensions.tileWidth,
-      frameHeight: GameDimensions.tileHeight
-    });
-
-    scene.load.spritesheet(ASSETS.EXPLOSION, "assets/explosion.png", {
-      frameWidth: GameDimensions.tileWidth,
-      frameHeight: GameDimensions.tileHeight
+    [
+      [ASSETS.BOMB, "assets/bomb.png"],
+      [ASSETS.EXPLOSION, "assets/explosion.png"],
+      [ASSETS.BOMB_COUNT_POWERUP, "assets/bomb_powerup.png"]
+    ].forEach(([assetName, assetPath]) => {
+      scene.load.spritesheet(assetName, assetPath, {
+        frameWidth: GameDimensions.tileWidth,
+        frameHeight: GameDimensions.tileHeight
+      });
     });
   }
 
@@ -192,16 +197,16 @@ export class BombGame {
         }
       },
       scene: {
-        preload: function(this: GameScene) {
+        preload: function (this: GameScene) {
           self.currentScene = this;
           self.preload();
         },
-        create: function(this: GameScene) {
+        create: function (this: GameScene) {
           self.currentScene = this;
           self.create(state);
           self.gameConfigs.onStart();
         },
-        update: function(this: GameScene) {
+        update: function (this: GameScene) {
           self.currentScene = this;
           self.update();
         }
@@ -222,7 +227,7 @@ export class BombGame {
     player.setBounce(1.2);
     player.setCollideWorldBounds(true);
 
-    this.groups.players.add(player);
+    this.groups.addPlayer(player);
 
     // TODO: put this in the group
     this.currentScene.physics.add.collider(player, this.breakableMap.layer);
@@ -242,11 +247,9 @@ export class BombGame {
   private initWithState(state: BackendState & { id: string }) {
     const { playerRegistry } = this;
     this.playerId = this.socket.id; // state.id;
-    this.groups = {
-      players: this.currentScene.add.group(),
-      explosions: this.currentScene.add.group(),
-      bombs: this.currentScene.add.group()
-    };
+    this.groups = new GroupManager(
+      () => this.currentScene
+    );
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
@@ -259,20 +262,17 @@ export class BombGame {
       this.breakableMap.map.removeTileAt(x, y);
     }
 
-    this.currentScene.physics.add.collider(
-      this.groups.players,
-      this.groups.bombs
-    );
+    this.groups
+      .registerBombCollider()
+      .onPlayerPowerUp(() => {
 
-    this.currentScene.physics.add.collider(
-      this.groups.players,
-      this.groups.explosions,
-      (sprite: Phaser.GameObjects.GameObject) => this.processPlayerDeath(sprite)
-    );
-
+      })
+      .onPlayerExploded((sprite: GameObject) => {
+        this.processPlayerDeath(sprite)
+      });
   }
 
-  private processPlayerDeath(playerSprite: Phaser.GameObjects.GameObject) {
+  private processPlayerDeath(playerSprite: GameObject) {
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       // To not overload the server, only the player itself can say
       // that he/she was killed
@@ -329,6 +329,10 @@ export class BombGame {
       this.setupBombAt(info);
     });
 
+    this.socket.on(SocketEvents.NewPowerUpAt, (info: TPowerUpInfo) => {
+      this.placePowerUpAt(info);
+    });
+
     this.socket.on(
       SocketEvents.WallDestroyed,
       ({ x, y }: SimpleCoordinates) => {
@@ -343,18 +347,22 @@ export class BombGame {
     this.initSocketListeners();
     const scene = this.currentScene;
 
-
+    [
+      [ASSETS.BOMB, "bomb-animation"],
+      [ASSETS.BOMB_COUNT_POWERUP, "bomb-count-animation"]
+    ].forEach(([assetName, animationKey]) => {
       scene.anims.create({
-        key: "bomb-animation",
-        frames: scene.anims.generateFrameNumbers(ASSETS.BOMB, {
+        key: animationKey,
+        frames: scene.anims.generateFrameNumbers(assetName, {
           start: 0,
           end: 1
         }),
         frameRate: 2,
         repeat: -1
       });
+    });
 
-      // Player animations
+    // Player animations
     scene.anims.create({
       key: "left",
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
@@ -408,11 +416,11 @@ export class BombGame {
   }
 
   private addExplosionSprite({
-    pixX,
-    pixY,
-    gridX,
-    gridY
-  }: {
+                               pixX,
+                               pixY,
+                               gridX,
+                               gridY
+                             }: {
     pixX: number;
     pixY: number;
     gridX: number;
@@ -423,7 +431,7 @@ export class BombGame {
     const physicsBody = (killer.body as unknown) as Phaser.Physics.Arcade.Body;
     physicsBody.setCircle(GameDimensions.tileHeight / 2);
 
-    this.groups.explosions.add(killer);
+    this.groups.addExplosion(killer);
     const key = makeKey({ x: gridX, y: gridY });
 
     return { key, sprite };
@@ -437,12 +445,12 @@ export class BombGame {
     const { tileWidth, tileHeight } = GameDimensions;
 
     if (this.hasBombAt({ x: gridX, y: gridY })) {
-      console.log(`Found a bomb at ${gridX} - ${gridY}, delegated to it`);
+      console.log(`Found a bomb at ${ gridX } - ${ gridY }, delegated to it`);
       // Let the next bomb deal with things
       this.explodeBombAt(gridX, gridY);
       return true;
     } else if (this.hasExplosionAt({ x: gridX, y: gridY })) {
-      console.log(`Found a explosion at ${gridX} - ${gridY}, stopping`);
+      console.log(`Found a explosion at ${ gridX } - ${ gridY }, stopping`);
       return true;
     } else if (this.hasAnyWallAt(gridX, gridY)) {
       // No Explosions at walls
@@ -568,7 +576,7 @@ export class BombGame {
     this.bombMap[key] = { sprite: newBomb, range };
 
     const bombCollide = this.currentScene.physics.add.existing(newBomb, true);
-    this.groups.bombs.add(bombCollide);
+    this.groups.addBomb(bombCollide);
   }
 
   private explodeBombAt(gridX: number, gridY: number) {
@@ -594,9 +602,7 @@ export class BombGame {
   private update() {
     const scene = this.currentScene;
 
-    for(const child of this.groups.bombs.children.entries){
-      (child as GameSprite).anims.play("bomb-animation", true);
-    }
+    this.groups.playAnimations();
 
     for (const [id, registry] of Object.entries(this.playerRegistry)) {
       const { player, directions } = registry;
@@ -658,6 +664,22 @@ export class BombGame {
     const player = this.playerRegistry[this.playerId];
     if (player) {
       this.socket.emit(SocketEvents.Movement, player.directions);
+    }
+  }
+
+  private addPowerUpSprite(info: TPowerUpInfo) {
+  }
+
+  private placePowerUpAt(info: TPowerUpInfo) {
+    const { tileWidth, tileHeight } = GameDimensions;
+    const pixX = gridUnitToPixel(info.x, tileWidth);
+    const pixY = gridUnitToPixel(info.y, tileHeight);
+
+    if (info.powerUpType === 'BombQuantity') {
+      const pwrUp = this.currentScene.add.sprite(pixX, pixY, ASSETS.BOMB_COUNT_POWERUP, 1);
+      const collide = this.currentScene.physics.add.existing(pwrUp, true);
+    } else {
+      console.log("Can't find power up of type: ", info.powerUpType);
     }
   }
 }
