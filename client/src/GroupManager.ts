@@ -1,17 +1,20 @@
-import { GameObject, GamePhysicsSprite, GameScene, GameSprite } from "./alias";
+import { GameObject, GamePhysicsSprite, GameScene, GameSprite, SpriteGroup } from "./alias";
+import { TPowerUpType } from "commons";
 
 
-type CollisionCb = (
-  first: GameObject,
-  second: GameObject
-) => unknown
+type PlayerGameObject = GameObject & { id?: string }
 
 export class GroupManager {
-  private readonly players: Phaser.GameObjects.Group;
-  private readonly explosions: Phaser.GameObjects.Group;
-  private readonly bombs: Phaser.GameObjects.Group;
-  private readonly powerUps: Phaser.GameObjects.Group;
-  private provider: () => GameScene;
+  private readonly players: SpriteGroup & {
+    children: Phaser.Structs.Set<PlayerGameObject>;
+  };
+  private readonly explosions: SpriteGroup;
+  private readonly bombs: SpriteGroup;
+  private readonly provider: () => GameScene;
+  private readonly powerUps: {
+    bombCount: SpriteGroup
+    bombRange: SpriteGroup
+  };
 
   constructor(sceneProvider: () => GameScene) {
     this.provider = sceneProvider;
@@ -20,34 +23,49 @@ export class GroupManager {
     this.players = scene.add.group();
     this.explosions = scene.add.group();
     this.bombs = scene.add.group();
-    this.powerUps = scene.add.group();
+    this.powerUps = {
+      bombCount: scene.add.group(),
+      bombRange: scene.add.group()
+    };
   }
 
-  addPlayer(playerSprite: GamePhysicsSprite) {
-    this.players.add(playerSprite);
-  }
-
-  addExplosion(explosionSprite: GameObject) {
-    this.explosions.add(explosionSprite);
-  }
-
-  addBomb(bombSprite: GameObject) {
-    this.bombs.add(bombSprite);
-  }
-
-
-  onPlayerExploded(cb: CollisionCb) {
+  onPlayerExploded(onCollision: (id: string) => unknown) {
     const { players, explosions } = this;
 
-    this.provider().physics.add.collider(players, explosions, cb);
+    this.provider().physics.add.collider(
+      players,
+      explosions,
+      (player) => onCollision(
+        (player as PlayerGameObject).id!
+      )
+    );
 
     return this;
   }
 
-  onPlayerPowerUp(cb: CollisionCb) {
+  onPlayerPowerUpCatch(
+    onCollision: (
+      id: string,
+      type: TPowerUpType
+    ) => unknown
+  ) {
     const { players, powerUps } = this;
 
-    this.provider().physics.add.collider(players, powerUps, cb);
+    const list: [SpriteGroup, TPowerUpType][] = [
+      [powerUps.bombRange, "BombRange"],
+      [powerUps.bombCount, "BombCount"]
+    ];
+
+    list.forEach(([group, type]) => {
+      this.provider().physics.add.collider(
+        players,
+        group,
+        (player) => onCollision(
+          (player as PlayerGameObject).id!,
+          type
+        )
+      )
+    });
 
     return this;
   }
@@ -60,14 +78,48 @@ export class GroupManager {
     return this;
   }
 
+  addPlayer(
+    playerSprite: PlayerGameObject,
+    id: string
+  ) {
+    playerSprite.id = id;
+    this.players.add(playerSprite);
+  }
+
+  addExplosion(explosionSprite: GameObject) {
+    this.explosions.add(explosionSprite);
+  }
+
+  addBomb(bombSprite: GameObject) {
+    this.bombs.add(bombSprite);
+  }
+
+  addPowerUp(powerUpSprite: GameObject, type: TPowerUpType) {
+    const { powerUps } = this;
+
+    if (type === 'BombRange') {
+      powerUps.bombRange.add(powerUpSprite);
+
+    } else if (type === 'BombCount') {
+      powerUps.bombCount.add(powerUpSprite);
+
+    } else {
+      console.log(type, " not recognized!")
+    }
+  }
+
   playAnimations() {
-    const scene = this.provider();
+    const { powerUps } = this;
 
     for (const child of this.bombs.children.entries) {
       (child as GameSprite).anims.play("bomb-animation", true);
     }
 
-    for (const child of this.powerUps.children.entries) {
+    for (const child of powerUps.bombRange.children.entries) {
+      (child as GameSprite).anims.play("bomb-range-animation", true);
+    }
+
+    for (const child of powerUps.bombCount.children.entries) {
       (child as GameSprite).anims.play("bomb-count-animation", true);
     }
   }

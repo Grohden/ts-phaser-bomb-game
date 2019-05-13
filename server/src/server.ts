@@ -1,12 +1,12 @@
 import {
-    BackendState,
-    GameDimensions,
-    PlayerDirections,
-    SERVER_UPDATE_INTERVAL,
-    TPowerUpInfo,
-    SimpleCoordinates,
-    SocketEvents,
-    PlayerRegistry
+  BackendState,
+  GameDimensions,
+  PlayerDirections,
+  PlayerRegistry,
+  SERVER_UPDATE_INTERVAL,
+  SimpleCoordinates,
+  SocketEvents,
+  TPowerUpInfo
 } from 'commons'
 import express from 'express'
 import http from 'http'
@@ -27,149 +27,150 @@ app.use('/assets', express.static(path.resolve(__dirname, clientPath, 'build/ass
 
 // Routing
 app.get('/', function (request, response) {
-    response.sendFile(path.resolve(__dirname, clientPath, 'build/index.html'))
+  response.sendFile(path.resolve(__dirname, clientPath, 'build/index.html'))
 });
 
 // Starts the server.
 server.listen(5000, function () {
-    console.log("Address", server.address());
-    console.log('Starting server on port 5000')
+  console.log("Address", server.address());
+  console.log('Starting server on port 5000')
 });
 
 
 const state: BackendState = {
-    slots: {},
-    playerRegistry: {},
-    destroyedWalls: []
+  slots: {},
+  playerRegistry: {},
+  destroyedWalls: []
 };
 
 
 type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
+
 function findRandomSlot(): TRandomSlot | undefined {
-    const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2);
-    const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2);
-    const availableSlots: TRandomSlot[] = [];
+  const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2);
+  const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2);
+  const availableSlots: TRandomSlot[] = [];
 
-    if (!state.slots.first) {
-        availableSlots.push({
-            slot: 'first',
-            x: centerXOffset,
-            y: centerYOffset
-        })
-    }
+  if (!state.slots.first) {
+    availableSlots.push({
+      slot: 'first',
+      x: centerXOffset,
+      y: centerYOffset
+    })
+  }
 
-    if (!state.slots.second) {
-        availableSlots.push({
-            slot: 'second',
-            x: GameDimensions.gameWidth - centerXOffset,
-            y: centerYOffset
-        })
-    }
+  if (!state.slots.second) {
+    availableSlots.push({
+      slot: 'second',
+      x: GameDimensions.gameWidth - centerXOffset,
+      y: centerYOffset
+    })
+  }
 
-    if (!state.slots.third) {
-        availableSlots.push({
-            slot: 'third',
-            x: centerXOffset,
-            y: GameDimensions.gameHeight - centerYOffset
-        })
-    }
+  if (!state.slots.third) {
+    availableSlots.push({
+      slot: 'third',
+      x: centerXOffset,
+      y: GameDimensions.gameHeight - centerYOffset
+    })
+  }
 
-    if (!state.slots.fourth) {
-        availableSlots.push({
-            slot: 'fourth',
-            x: GameDimensions.gameWidth - centerXOffset,
-            y: GameDimensions.gameHeight - centerYOffset
-        })
-    }
+  if (!state.slots.fourth) {
+    availableSlots.push({
+      slot: 'fourth',
+      x: GameDimensions.gameWidth - centerXOffset,
+      y: GameDimensions.gameHeight - centerYOffset
+    })
+  }
 
 
-    if(availableSlots.length >= 1){
-        return availableSlots[Math.floor(Math.random()*availableSlots.length)];
-    }
+  if (availableSlots.length >= 1) {
+    return availableSlots[Math.floor(Math.random() * availableSlots.length)];
+  }
 }
 
 io.on('connection', function (socket) {
-    const playerId = socket.id; //socket.request.socket.remoteAddress
+  const playerId = socket.id; //socket.request.socket.remoteAddress
 
-    const position = findRandomSlot();
-    if (position) {
-        const newPlayer: PlayerRegistry = {
-            isDead: false,
-            slot: position.slot,
-            status: {
-              bombRange: 2,
-              maxBombCount: 1
-            },
-            directions: {
-                down: false,
-                left: false,
-                right: false,
-                up: false,
-                ...position
-            }
-        };
+  const position = findRandomSlot();
+  if (position) {
+    const newPlayer: PlayerRegistry = {
+      isDead: false,
+      slot: position.slot,
+      status: {
+        bombRange: 2,
+        maxBombCount: 1
+      },
+      directions: {
+        down: false,
+        left: false,
+        right: false,
+        up: false,
+        ...position
+      }
+    };
 
-        console.log(`New player ${playerId} joins at x ${newPlayer.directions.x} y ${newPlayer.directions.x} on slot ${[position.slot]}`);
-        state.slots[newPlayer.slot] = position;
-        state.playerRegistry[playerId] = newPlayer;
+    console.log(`New player ${ playerId } joins at x ${ newPlayer.directions.x } y ${ newPlayer.directions.x } on slot ${ [position.slot] }`);
+    state.slots[newPlayer.slot] = position;
+    state.playerRegistry[playerId] = newPlayer;
 
-        socket.emit(SocketEvents.InitWithState, {...state, id: playerId});
-        socket.broadcast.emit(SocketEvents.NewPlayer, {...newPlayer, id: playerId});
-    } else {
-        socket.emit(SocketEvents.InitWithState, {...state, id: playerId});
+    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId });
+    socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId });
+  } else {
+    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId });
+  }
+
+  socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
+    const player = state.playerRegistry[playerId];
+    if (player) {
+      player.directions = directions
+    }
+  });
+
+  socket.on(SocketEvents.Disconnect, () => {
+    const player = state.playerRegistry[playerId];
+    if (player) {
+      delete state.slots[player.slot];
+      delete state.playerRegistry[playerId];
     }
 
-    socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
-        const player = state.playerRegistry[playerId];
-        if (player) {
-            player.directions = directions
-        }
-    });
+    io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
+  });
 
-    socket.on(SocketEvents.Disconnect, () => {
-        const player = state.playerRegistry[playerId];
-        if (player) {
-            delete state.slots[player.slot];
-            delete state.playerRegistry[playerId];
-        }
+  socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
+    const player = state.playerRegistry[playerId];
 
-        io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
-    });
+    if (player) {
+      socket.broadcast.emit(SocketEvents.NewBombAt, {
+        ...coords,
+        range: player.status.bombRange
+      })
+    }
+  });
 
-    socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
-        const player = state.playerRegistry[playerId];
+  socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
+    state.destroyedWalls = state.destroyedWalls.concat(coordinates);
 
-        if(player){
-            socket.broadcast.emit(SocketEvents.NewBombAt, {
-                ...coords,
-                range: player.status.bombRange
-            })
-        }
-    });
+    const npAt: TPowerUpInfo = {
+      ...coordinates,
+      powerUpType: "BombRange"
+    };
 
-    socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
-        state.destroyedWalls = state.destroyedWalls.concat(coordinates);
+    socket.emit(SocketEvents.NewPowerUpAt, npAt)
+  });
 
-        const npAt: TPowerUpInfo = {
-            ...coordinates,
-            powerUpType:"BombQuantity"
-        };
+  socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
+    console.log('Player ', deadPlayerId, ' died');
 
-        socket.emit(SocketEvents.NewPowerUpAt, npAt)
-    });
+    if (deadPlayerId in state.playerRegistry) {
+      state.playerRegistry[deadPlayerId].isDead = true
+    }
 
-    socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
-        console.log('Player ', deadPlayerId, ' died');
-
-        if (deadPlayerId in state.playerRegistry) {
-            state.playerRegistry[deadPlayerId].isDead = true
-        }
-
-        socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
-    })
+    socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
+  })
 
 });
 
 setInterval(function () {
-    io.sockets.emit(SocketEvents.StateUpdate, state)
+  io.sockets.emit(SocketEvents.StateUpdate, state)
 }, SERVER_UPDATE_INTERVAL);

@@ -5,11 +5,12 @@ import {
   PlayerRegistry,
   SimpleCoordinates,
   SocketEvents,
-  TPowerUpInfo
+  TPowerUpInfo,
+  TPowerUpType
 } from "commons";
 import Phaser from "phaser";
 import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import { GameObject, GamePhysicsSprite, GameScene, GameSprite } from "./alias";
+import { GamePhysicsSprite, GameScene, GameSprite } from "./alias";
 import { GroupManager } from "./GroupManager";
 import Socket = SocketIOClient.Socket;
 
@@ -215,6 +216,7 @@ export class BombGame {
   }
 
   private fabricPlayer(
+    id: string,
     directions: PlayerDirections
   ): Phaser.Physics.Arcade.Sprite {
     const player = this.currentScene.physics.add.sprite(
@@ -227,7 +229,7 @@ export class BombGame {
     player.setBounce(1.2);
     player.setCollideWorldBounds(true);
 
-    this.groups.addPlayer(player);
+    this.groups.addPlayer(player, id);
 
     // TODO: put this in the group
     this.currentScene.physics.add.collider(player, this.breakableMap.layer);
@@ -254,7 +256,7 @@ export class BombGame {
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
         ...data,
-        player: this.fabricPlayer(data.directions)
+        player: this.fabricPlayer(id, data.directions)
       };
     }
 
@@ -264,27 +266,37 @@ export class BombGame {
 
     this.groups
       .registerBombCollider()
-      .onPlayerPowerUp(() => {
-
-      })
-      .onPlayerExploded((sprite: GameObject) => {
-        this.processPlayerDeath(sprite)
-      });
+      .onPlayerPowerUpCatch(this.processPowerUpCatch)
+      .onPlayerExploded(this.processPlayerDeath);
   }
 
-  private processPlayerDeath(playerSprite: GameObject) {
-    for (const [id, registry] of Object.entries(this.playerRegistry)) {
-      // To not overload the server, only the player itself can say
-      // that he/she was killed
-      if (
-        !registry.isDead &&
-        registry.player === playerSprite &&
-        this.playerId === id
-      ) {
+  private processPowerUpCatch(id: string, type: TPowerUpType) {
+    const registry = this.playerRegistry[id];
+
+    if (registry) {
+      if (!registry.isDead && this.playerId === id) {
+        this.socket.emit(SocketEvents.PowerUpCollected, {
+          id, type
+        });
+      }
+    } else {
+      debug && console.debug("Registry not found ", id)
+    }
+  }
+
+  private processPlayerDeath(id: string) {
+    const registry = this.playerRegistry[id];
+
+    // To not overload the server, only the player itself can say
+    // that he/she was killed
+    if (registry) {
+      if (!registry.isDead && this.playerId === id) {
         registry.isDead = true;
         this.socket.emit(SocketEvents.PlayerDied, id);
         this.gameConfigs.onDeath();
       }
+    } else {
+      debug && console.debug("Registry not found ", id)
     }
   }
 
@@ -296,7 +308,10 @@ export class BombGame {
       (registry: PlayerRegistry & { id: string }) => {
         playerRegistry[registry.id] = {
           ...registry,
-          player: this.fabricPlayer(registry.directions)
+          player: this.fabricPlayer(
+            registry.id,
+            registry.directions
+          )
         };
       }
     );
@@ -415,12 +430,7 @@ export class BombGame {
     return this.breakableMap.map.hasTileAt(gridX, gridY);
   }
 
-  private addExplosionSprite({
-                               pixX,
-                               pixY,
-                               gridX,
-                               gridY
-                             }: {
+  private addExplosionSprite({ pixX, pixY, gridX, gridY }: {
     pixX: number;
     pixY: number;
     gridX: number;
@@ -667,17 +677,16 @@ export class BombGame {
     }
   }
 
-  private addPowerUpSprite(info: TPowerUpInfo) {
-  }
-
   private placePowerUpAt(info: TPowerUpInfo) {
     const { tileWidth, tileHeight } = GameDimensions;
     const pixX = gridUnitToPixel(info.x, tileWidth);
     const pixY = gridUnitToPixel(info.y, tileHeight);
 
-    if (info.powerUpType === 'BombQuantity') {
+    if (info.powerUpType === 'BombCount') {
       const pwrUp = this.currentScene.add.sprite(pixX, pixY, ASSETS.BOMB_COUNT_POWERUP, 1);
       const collide = this.currentScene.physics.add.existing(pwrUp, true);
+
+      this.groups.addPowerUp(collide, 'BombCount')
     } else {
       console.log("Can't find power up of type: ", info.powerUpType);
     }
