@@ -561,7 +561,7 @@ export class BombGame {
         sprite.destroy(true);
         delete this.explosionMap[key];
       });
-    }, 700);
+    }, 400);
   }
 
   private destroyWallAt(x: number, y: number) {
