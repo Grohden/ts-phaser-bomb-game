@@ -6,11 +6,17 @@ import {
   SimpleCoordinates,
   SocketEvents,
   TPowerUpInfo,
-  TPowerUpType
+  PlayerStatus
 } from "commons";
 import Phaser from "phaser";
-import { ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import { GamePhysicsSprite, GameScene, GameSprite } from "./alias";
+import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
+import {
+  GamePhysicsSprite,
+  GameScene,
+  GameSprite,
+  TPlayerGameObject,
+  TPowerUpGameObject ,
+} from "./alias";
 import { GroupManager } from "./GroupManager";
 import Socket = SocketIOClient.Socket;
 
@@ -135,26 +141,26 @@ export class BombGame {
     const velocity = 160;
     if (left) {
       sprite.setVelocityX(-velocity);
-      sprite.anims.play("left", true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_LEFT, true);
     } else if (right) {
       sprite.setVelocityX(velocity);
-      sprite.anims.play("right", true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_RIGHT, true);
     } else {
       sprite.setVelocityX(0);
     }
 
     if (down) {
       sprite.setVelocityY(-velocity);
-      sprite.anims.play("turn-down", true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_DOWN, true);
     } else if (up) {
       sprite.setVelocityY(velocity);
-      sprite.anims.play("turn-up", true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP, true);
     } else {
       sprite.setVelocityY(0);
     }
 
     if (!down && !up && !left && !right) {
-      sprite.anims.play("turn-up");
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP);
     }
   }
 
@@ -266,22 +272,27 @@ export class BombGame {
 
     this.groups
       .registerBombCollider()
-      .onPlayerPowerUpCatch(this.processPowerUpCatch)
-      .onPlayerExploded(this.processPlayerDeath);
+      .onPlayerPowerUpCatch(this.processPowerUpCatch.bind(this))
+      .onPlayerExploded(this.processPlayerDeath.bind(this));
   }
 
-  private processPowerUpCatch(id: string, type: TPowerUpType) {
-    const registry = this.playerRegistry[id];
+  private processPowerUpCatch(player: TPlayerGameObject, powerUp: TPowerUpGameObject) {
+    const id = player.id!;
+    const registry = this.playerRegistry[player.id!];
 
     if (registry) {
-      if (!registry.isDead && this.playerId === id) {
+      if (this.playerId === id) {
         this.socket.emit(SocketEvents.PowerUpCollected, {
-          id, type
+          id,
+          type: powerUp.powerUpType!
         });
       }
     } else {
       debug && console.debug("Registry not found ", id)
     }
+
+    // Remove the power up sprite
+    powerUp.destroy(true)
   }
 
   private processPlayerDeath(id: string) {
@@ -340,6 +351,16 @@ export class BombGame {
       }
     });
 
+    this.socket.on(
+      SocketEvents.PlayerStatusUpdate,
+      (status: PlayerStatus & { id: string}) => {
+        const registry = this.playerRegistry[status.id];
+
+        if(registry) {
+          registry.status = status;
+        }
+    });
+
     this.socket.on(SocketEvents.NewBombAt, (info: TNewBombInfo) => {
       this.setupBombAt(info);
     });
@@ -363,8 +384,8 @@ export class BombGame {
     const scene = this.currentScene;
 
     [
-      [ASSETS.BOMB, "bomb-animation"],
-      [ASSETS.BOMB_COUNT_POWERUP, "bomb-count-animation"]
+      [ASSETS.BOMB, ANIMATIONS.BOMB_PULSE],
+      [ASSETS.BOMB_COUNT_POWERUP, ANIMATIONS.BOMB_COUNT]
     ].forEach(([assetName, animationKey]) => {
       scene.anims.create({
         key: animationKey,
@@ -379,7 +400,7 @@ export class BombGame {
 
     // Player animations
     scene.anims.create({
-      key: "left",
+      key: ANIMATIONS.PLAYER_TURN_LEFT,
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
         start: 0,
         end: 3
@@ -389,7 +410,7 @@ export class BombGame {
     });
 
     scene.anims.create({
-      key: "right",
+      key: ANIMATIONS.PLAYER_TURN_RIGHT,
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
         start: 4,
         end: 7
@@ -399,7 +420,7 @@ export class BombGame {
     });
 
     scene.anims.create({
-      key: "turn-up",
+      key: ANIMATIONS.PLAYER_TURN_UP,
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
         start: 10,
         end: 11
@@ -409,7 +430,7 @@ export class BombGame {
     });
 
     scene.anims.create({
-      key: "turn-down",
+      key: ANIMATIONS.PLAYER_TURN_DOWN,
       frames: scene.anims.generateFrameNumbers(ASSETS.PLAYER, {
         start: 8,
         end: 9

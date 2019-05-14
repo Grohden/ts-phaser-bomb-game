@@ -1,32 +1,31 @@
-import { GameObject, GamePhysicsSprite, GameScene, GameSprite, SpriteGroup } from "./alias";
+import {
+  GameObject,
+  GameScene,
+  GameSprite,
+  SpriteGroup,
+  TPlayerGameObject,
+  TPowerUpGameObject,
+  TypedSpriteGroup
+} from "./alias";
 import { TPowerUpType } from "commons";
-
-
-type PlayerGameObject = GameObject & { id?: string }
+import { ANIMATIONS } from "./assets";
 
 export class GroupManager {
-  private readonly players: SpriteGroup & {
-    children: Phaser.Structs.Set<PlayerGameObject>;
-  };
+  private readonly provider: () => GameScene;
+  private readonly players: TypedSpriteGroup<TPlayerGameObject>;
+  private readonly powerUps: TypedSpriteGroup<TPowerUpGameObject>;
   private readonly explosions: SpriteGroup;
   private readonly bombs: SpriteGroup;
-  private readonly provider: () => GameScene;
-  private readonly powerUps: {
-    bombCount: SpriteGroup
-    bombRange: SpriteGroup
-  };
 
   constructor(sceneProvider: () => GameScene) {
     this.provider = sceneProvider;
 
     const scene = this.provider();
+
     this.players = scene.add.group();
     this.explosions = scene.add.group();
     this.bombs = scene.add.group();
-    this.powerUps = {
-      bombCount: scene.add.group(),
-      bombRange: scene.add.group()
-    };
+    this.powerUps = scene.add.group();
   }
 
   onPlayerExploded(onCollision: (id: string) => unknown) {
@@ -36,7 +35,7 @@ export class GroupManager {
       players,
       explosions,
       (player) => onCollision(
-        (player as PlayerGameObject).id!
+        (player as TPlayerGameObject).id!
       )
     );
 
@@ -45,27 +44,19 @@ export class GroupManager {
 
   onPlayerPowerUpCatch(
     onCollision: (
-      id: string,
-      type: TPowerUpType
+      player: TPlayerGameObject,
+      powerUp: TPowerUpGameObject,
     ) => unknown
   ) {
     const { players, powerUps } = this;
 
-    const list: [SpriteGroup, TPowerUpType][] = [
-      [powerUps.bombRange, "BombRange"],
-      [powerUps.bombCount, "BombCount"]
-    ];
-
-    list.forEach(([group, type]) => {
-      this.provider().physics.add.collider(
-        players,
-        group,
-        (player) => onCollision(
-          (player as PlayerGameObject).id!,
-          type
-        )
+    this.provider().physics.add.collider(
+      players, powerUps,
+      (player, powerUp) => onCollision(
+        (player as TPlayerGameObject),
+        (powerUp as TPowerUpGameObject)
       )
-    });
+    );
 
     return this;
   }
@@ -79,7 +70,7 @@ export class GroupManager {
   }
 
   addPlayer(
-    playerSprite: PlayerGameObject,
+    playerSprite: TPlayerGameObject,
     id: string
   ) {
     playerSprite.id = id;
@@ -94,33 +85,32 @@ export class GroupManager {
     this.bombs.add(bombSprite);
   }
 
-  addPowerUp(powerUpSprite: GameObject, type: TPowerUpType) {
-    const { powerUps } = this;
+  addPowerUp(
+    powerUpSprite: TPowerUpGameObject,
+    type: TPowerUpType
+  ) {
+    powerUpSprite.powerUpType = type;
+    this.powerUps.add(powerUpSprite);
+  }
 
-    if (type === 'BombRange') {
-      powerUps.bombRange.add(powerUpSprite);
-
-    } else if (type === 'BombCount') {
-      powerUps.bombCount.add(powerUpSprite);
-
-    } else {
-      console.log(type, " not recognized!")
+  private getAnimationKey(type: TPowerUpType): string {
+    switch (type) {
+      case "BombCount":
+        return ANIMATIONS.BOMB_COUNT;
+      case "BombRange":
+      default:
+        return ANIMATIONS.BOMB_RANGE;
     }
   }
 
   playAnimations() {
-    const { powerUps } = this;
-
     for (const child of this.bombs.children.entries) {
-      (child as GameSprite).anims.play("bomb-animation", true);
+      (child as GameSprite).anims.play(ANIMATIONS.BOMB_PULSE, true);
     }
 
-    for (const child of powerUps.bombRange.children.entries) {
-      (child as GameSprite).anims.play("bomb-range-animation", true);
-    }
-
-    for (const child of powerUps.bombCount.children.entries) {
-      (child as GameSprite).anims.play("bomb-count-animation", true);
+    for (const child of this.powerUps.children.entries) {
+      const key = this.getAnimationKey(child.powerUpType!);
+      (child as GameSprite).anims.play(key, true);
     }
   }
 

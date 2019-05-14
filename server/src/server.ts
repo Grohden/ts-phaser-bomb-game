@@ -6,7 +6,8 @@ import {
   SERVER_UPDATE_INTERVAL,
   SimpleCoordinates,
   SocketEvents,
-  TPowerUpInfo
+  TPowerUpInfo,
+  TPowerUpType
 } from 'commons'
 import express from 'express'
 import http from 'http'
@@ -153,7 +154,7 @@ io.on('connection', function (socket) {
 
     const npAt: TPowerUpInfo = {
       ...coordinates,
-      powerUpType: "BombRange"
+      powerUpType: "BombCount"
     };
 
     socket.emit(SocketEvents.NewPowerUpAt, npAt)
@@ -167,6 +168,24 @@ io.on('connection', function (socket) {
     }
 
     socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
+  });
+
+  socket.on(SocketEvents.PowerUpCollected, (info: { id: string, type: TPowerUpType }) => {
+    const player = state.playerRegistry[playerId];
+
+    if (player) {
+      const { type } = info;
+      if (type == "BombRange") {
+        player.status.bombRange++
+      } else if (type == "BombCount") {
+        player.status.maxBombCount++
+      }
+
+      socket.emit(SocketEvents.PlayerStatusUpdate, {
+        id: info.id,
+        ...player.status
+      })
+    }
   })
 
 });
