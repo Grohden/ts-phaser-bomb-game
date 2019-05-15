@@ -98,7 +98,6 @@ export class GroupManager {
       case "BombCount":
         return ANIMATIONS.BOMB_COUNT;
       case "BombRange":
-      default:
         return ANIMATIONS.BOMB_RANGE;
     }
   }

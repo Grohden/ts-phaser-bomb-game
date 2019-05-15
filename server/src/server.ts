@@ -47,6 +47,10 @@ const state: BackendState = {
 
 type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
 
+function randomOfList<T>(list: T[]): T {
+  return list[Math.floor(Math.random()*list.length)];
+}
+
 function findRandomSlot(): TRandomSlot | undefined {
   const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2);
   const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2);
@@ -86,9 +90,11 @@ function findRandomSlot(): TRandomSlot | undefined {
 
 
   if (availableSlots.length >= 1) {
-    return availableSlots[Math.floor(Math.random() * availableSlots.length)];
+    return randomOfList(availableSlots);
   }
 }
+
+
 
 io.on('connection', function (socket) {
   const playerId = socket.id; //socket.request.socket.remoteAddress
@@ -152,12 +158,21 @@ io.on('connection', function (socket) {
   socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
     state.destroyedWalls = state.destroyedWalls.concat(coordinates);
 
-    const npAt: TPowerUpInfo = {
-      ...coordinates,
-      powerUpType: "BombCount"
-    };
 
-    socket.emit(SocketEvents.NewPowerUpAt, npAt)
+    const rand = Math.random() * 100;
+    console.log("Generated random ", rand);
+    if (rand <= 10 || rand >= 95) {
+      const randomPower = randomOfList(
+        ["BombRange", "BombCount"] as TPowerUpType[]
+      );
+
+      const newPowerAt: TPowerUpInfo = {
+        ...coordinates,
+        powerUpType: randomPower
+      };
+
+      socket.emit(SocketEvents.NewPowerUpAt, newPowerAt)
+    }
   });
 
   socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
@@ -174,11 +189,13 @@ io.on('connection', function (socket) {
     const player = state.playerRegistry[playerId];
 
     if (player) {
-      const { type } = info;
-      if (type == "BombRange") {
-        player.status.bombRange++
-      } else if (type == "BombCount") {
-        player.status.maxBombCount++
+      switch (info.type) {
+        case "BombRange":
+          player.status.bombRange++;
+          break;
+        case "BombCount":
+          player.status.maxBombCount++;
+          break;
       }
 
       socket.emit(SocketEvents.PlayerStatusUpdate, {

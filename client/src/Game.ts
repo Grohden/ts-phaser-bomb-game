@@ -3,25 +3,19 @@ import {
   GameDimensions,
   PlayerDirections,
   PlayerRegistry,
+  PlayerStatus,
   SimpleCoordinates,
   SocketEvents,
   TPowerUpInfo,
-  PlayerStatus
+  TPowerUpType
 } from "commons";
 import Phaser from "phaser";
 import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import {
-  GamePhysicsSprite,
-  GameScene,
-  GameSprite,
-  TPlayerGameObject,
-  TPowerUpGameObject ,
-} from "./alias";
+import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from "./alias";
 import { GroupManager } from "./GroupManager";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
-
 
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
@@ -125,7 +119,8 @@ export class BombGame {
     [
       [ASSETS.BOMB, "assets/bomb.png"],
       [ASSETS.EXPLOSION, "assets/explosion.png"],
-      [ASSETS.BOMB_COUNT_POWERUP, "assets/bomb_powerup.png"]
+      [ASSETS.BOMB_COUNT_POWERUP, "assets/bomb_count_powerup.png"],
+      [ASSETS.BOMB_RANGE_POWERUP, "assets/bomb_range_powerup.png"]
     ].forEach(([assetName, assetPath]) => {
       scene.load.spritesheet(assetName, assetPath, {
         frameWidth: GameDimensions.tileWidth,
@@ -255,9 +250,7 @@ export class BombGame {
   private initWithState(state: BackendState & { id: string }) {
     const { playerRegistry } = this;
     this.playerId = this.socket.id; // state.id;
-    this.groups = new GroupManager(
-      () => this.currentScene
-    );
+    this.groups = new GroupManager(() => this.currentScene);
 
     for (const [id, data] of Object.entries(state.playerRegistry)) {
       playerRegistry[id] = {
@@ -276,7 +269,10 @@ export class BombGame {
       .onPlayerExploded(this.processPlayerDeath.bind(this));
   }
 
-  private processPowerUpCatch(player: TPlayerGameObject, powerUp: TPowerUpGameObject) {
+  private processPowerUpCatch(
+    player: TPlayerGameObject,
+    powerUp: TPowerUpGameObject
+  ) {
     const id = player.id!;
     const registry = this.playerRegistry[player.id!];
 
@@ -288,11 +284,11 @@ export class BombGame {
         });
       }
     } else {
-      debug && console.debug("Registry not found ", id)
+      debug && console.debug("Registry not found ", id);
     }
 
     // Remove the power up sprite
-    powerUp.destroy(true)
+    powerUp.destroy(true);
   }
 
   private processPlayerDeath(id: string) {
@@ -307,7 +303,7 @@ export class BombGame {
         this.gameConfigs.onDeath();
       }
     } else {
-      debug && console.debug("Registry not found ", id)
+      debug && console.debug("Registry not found ", id);
     }
   }
 
@@ -319,10 +315,7 @@ export class BombGame {
       (registry: PlayerRegistry & { id: string }) => {
         playerRegistry[registry.id] = {
           ...registry,
-          player: this.fabricPlayer(
-            registry.id,
-            registry.directions
-          )
+          player: this.fabricPlayer(registry.id, registry.directions)
         };
       }
     );
@@ -352,14 +345,15 @@ export class BombGame {
     });
 
     this.socket.on(
-      SocketEvents.PlayerStatusUpdate,
-      (status: PlayerStatus & { id: string}) => {
+        SocketEvents.PlayerStatusUpdate,
+      (status: PlayerStatus & { id: string }) => {
         const registry = this.playerRegistry[status.id];
 
-        if(registry) {
+        if (registry) {
           registry.status = status;
         }
-    });
+      }
+    );
 
     this.socket.on(SocketEvents.NewBombAt, (info: TNewBombInfo) => {
       this.setupBombAt(info);
@@ -385,7 +379,8 @@ export class BombGame {
 
     [
       [ASSETS.BOMB, ANIMATIONS.BOMB_PULSE],
-      [ASSETS.BOMB_COUNT_POWERUP, ANIMATIONS.BOMB_COUNT]
+      [ASSETS.BOMB_COUNT_POWERUP, ANIMATIONS.BOMB_COUNT],
+      [ASSETS.BOMB_RANGE_POWERUP, ANIMATIONS.BOMB_RANGE]
     ].forEach(([assetName, animationKey]) => {
       scene.anims.create({
         key: animationKey,
@@ -698,18 +693,28 @@ export class BombGame {
     }
   }
 
+  private getPowerAsset(type: TPowerUpType) {
+    switch (type) {
+      case "BombCount":
+        return ASSETS.BOMB_COUNT_POWERUP;
+      case "BombRange":
+        return ASSETS.BOMB_COUNT_POWERUP;
+    }
+  }
+
   private placePowerUpAt(info: TPowerUpInfo) {
     const { tileWidth, tileHeight } = GameDimensions;
     const pixX = gridUnitToPixel(info.x, tileWidth);
     const pixY = gridUnitToPixel(info.y, tileHeight);
 
-    if (info.powerUpType === 'BombCount') {
-      const pwrUp = this.currentScene.add.sprite(pixX, pixY, ASSETS.BOMB_COUNT_POWERUP, 1);
-      const collide = this.currentScene.physics.add.existing(pwrUp, true);
+    const powerUp = this.currentScene.add.sprite(
+      pixX,
+      pixY,
+      this.getPowerAsset(info.powerUpType),
+      1
+    );
 
-      this.groups.addPowerUp(collide, 'BombCount')
-    } else {
-      console.log("Can't find power up of type: ", info.powerUpType);
-    }
+    const collider = this.currentScene.physics.add.existing(powerUp, true);
+    this.groups.addPowerUp(collider, info.powerUpType);
   }
 }

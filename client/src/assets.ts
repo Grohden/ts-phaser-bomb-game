@@ -16,7 +16,8 @@ export const ASSETS = {
   PLAYER: "dude",
   BOMB: "bomb",
   EXPLOSION: "explosion",
-  BOMB_COUNT_POWERUP: "bomb_count_powerup"
+  BOMB_COUNT_POWERUP: "bomb_count_powerup",
+  BOMB_RANGE_POWERUP: "bomb_range_powerup"
 };
 
 export const MAPS = {
