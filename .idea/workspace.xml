@@ -2,7 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="585d6a37-2cc9-4bc9-8f13-31c050339ed2" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/Game.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/Game.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/client.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/server.ts" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/.tmp/" />
     <ignored path="$PROJECT_DIR$/temp/" />
@@ -16,14 +21,9 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/package-lock.json">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/client/package.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="136">
+            <state relative-caret-position="120">
               <caret line="8" column="33" selection-start-line="8" selection-start-column="33" selection-end-line="8" selection-end-column="40" />
             </state>
           </provider>
@@ -32,7 +32,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lerna.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="136">
+            <state relative-caret-position="120">
               <caret line="8" selection-start-line="8" selection-end-line="8" />
             </state>
           </provider>
@@ -41,8 +41,26 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/package.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="119">
-              <caret line="7" column="14" lean-forward="true" selection-start-line="7" selection-start-column="14" selection-end-line="7" selection-end-column="14" />
+            <state relative-caret-position="255">
+              <caret line="17" selection-start-line="17" selection-end-line="17" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/src/index.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="256">
+              <caret line="143" column="33" selection-start-line="143" selection-start-column="33" selection-end-line="143" selection-end-column="33" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/build/index.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="495">
+              <caret line="87" selection-start-line="86" selection-end-line="87" />
             </state>
           </provider>
         </entry>
@@ -50,20 +68,32 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/client/src/client.ts">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="238">
-              <caret line="14" column="2" selection-start-line="14" selection-start-column="2" selection-end-line="14" selection-end-column="2" />
+            <state relative-caret-position="166">
+              <caret line="33" column="47" selection-start-line="33" selection-start-column="47" selection-end-line="33" selection-end-column="47" />
               <folding>
-                <element signature="e#0#33#0" expanded="true" />
+                <element signature="e#0#34#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/client/src/game.ts">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/server/src/server.ts">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="102">
-              <caret line="246" column="40" lean-forward="true" selection-start-line="246" selection-start-column="40" selection-end-line="246" selection-end-column="40" />
+            <state relative-caret-position="171">
+              <caret line="139" column="14" lean-forward="true" selection-start-line="139" selection-start-column="14" selection-end-line="139" selection-end-column="14" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/client/src/Game.ts">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="126">
+              <caret line="581" column="30" lean-forward="true" selection-start-line="581" selection-start-column="30" selection-end-line="581" selection-end-column="30" />
+              <folding>
+                <element signature="e#0#182#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -76,8 +106,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tsconfig.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="68">
-              <caret line="4" column="28" lean-forward="true" selection-start-line="4" selection-start-column="28" selection-end-line="4" selection-end-column="28" />
+            <state relative-caret-position="60">
+              <caret line="4" column="28" selection-start-line="4" selection-start-column="28" selection-end-line="4" selection-end-column="28" />
             </state>
           </provider>
         </entry>
@@ -98,6 +128,12 @@
       <find>gameConfig</find>
       <find>makeDefaultTileMap</find>
       <find>front.</find>
+      <find>powerUp</find>
+      <find>status</find>
+      <find>died</find>
+      <find>bomb</find>
+      <find>ASSETS.BOMB</find>
+      <find>newBombAt</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -125,13 +161,17 @@
         <option value="$PROJECT_DIR$/front/src/assets.ts" />
         <option value="$PROJECT_DIR$/front/src/game.ts" />
         <option value="$PROJECT_DIR$/front/src/front.ts" />
-        <option value="$PROJECT_DIR$/server/src/server.ts" />
         <option value="$PROJECT_DIR$/client/package.json" />
         <option value="$PROJECT_DIR$/client/webpack.config.js" />
         <option value="$PROJECT_DIR$/lerna.json" />
         <option value="$PROJECT_DIR$/package.json" />
         <option value="$PROJECT_DIR$/client/src/game.ts" />
         <option value="$PROJECT_DIR$/tsconfig.json" />
+        <option value="$PROJECT_DIR$/client/build/index.html" />
+        <option value="$PROJECT_DIR$/client/src/client.ts" />
+        <option value="$PROJECT_DIR$/client/src/index.html" />
+        <option value="$PROJECT_DIR$/server/src/server.ts" />
+        <option value="$PROJECT_DIR$/client/src/Game.ts" />
       </list>
     </option>
   </component>
@@ -142,9 +182,9 @@
     <auto-save>true</auto-save>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-10" />
-    <option name="width" value="980" />
-    <option name="height" value="1040" />
+    <option name="x" value="1364" />
+    <option name="width" value="1284" />
+    <option name="height" value="1006" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -152,29 +192,46 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane" />
       <pane id="Scope">
         <subPane subId="Scope 'Project Files'; set:Project Files; class com.intellij.psi.search.scope.ProjectFilesScope">
           <expand>
             <path>
               <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
-              <item name="G:\Projects\ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
             </path>
             <path>
               <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
-              <item name="G:\Projects\ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
               <item name="client" type="9f88c78c:ScopeViewTreeModel$FileNode" />
             </path>
             <path>
               <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
-              <item name="G:\Projects\ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
               <item name="client" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+              <item name="build" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+            </path>
+            <path>
+              <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="client" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+              <item name="src" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+            </path>
+            <path>
+              <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="server" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+            </path>
+            <path>
+              <item name="ts-phaser-bomb-game" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
+              <item name="~/Área de trabalho/ts-phaser-bomb-game" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="server" type="9f88c78c:ScopeViewTreeModel$FileNode" />
               <item name="src" type="9f88c78c:ScopeViewTreeModel$FileNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="ProjectPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -193,7 +250,7 @@
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="prettierjs.PrettierConfiguration.Package" value="G:\Projects\ts-phaser-bomb-game\node_modules\prettier" />
     <property name="settings.editor.selected.configurable" value="settings.javascript.prettier" />
-    <property name="ts.external.directory.path" value="G:\Projects\ts-phaser-bomb-game\node_modules\typescript\lib" />
+    <property name="ts.external.directory.path" value="$PROJECT_DIR$/node_modules/typescript/lib" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -285,6 +342,8 @@
       <workItem from="1554564129665" duration="1117000" />
       <workItem from="1554565265653" duration="325000" />
       <workItem from="1555541665892" duration="474000" />
+      <workItem from="1557763783887" duration="1099000" />
+      <workItem from="1558366649650" duration="2036000" />
     </task>
     <task id="LOCAL-00001" summary="Webstorm files">
       <created>1553739502819</created>
@@ -374,32 +433,33 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="27684000" />
+    <option name="totallyTimeSpent" value="30819000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
+    <frame x="1364" y="0" width="1284" height="1006" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.56866956" visible="true" weight="0.2295302" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.56866956" visible="true" weight="0.25201938" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Messages" order="0" />
       <window_info anchor="bottom" id="Message" order="1" />
-      <window_info anchor="bottom" id="Find" order="2" weight="0.3286119" />
+      <window_info anchor="bottom" id="Find" order="2" weight="0.32847533" />
       <window_info anchor="bottom" id="Run" order="3" sideWeight="0.49966952" weight="0.33994335" />
       <window_info anchor="bottom" id="Debug" order="4" weight="0.20113315" />
       <window_info anchor="bottom" id="Cvs" order="5" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="6" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="7" />
-      <window_info anchor="bottom" id="Docker" order="8" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Version Control" order="9" sideWeight="0.4990086" weight="0.37393767" />
-      <window_info anchor="bottom" id="TypeScript" order="10" sideWeight="0.49966952" weight="0.3286119" />
-      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.50033045" side_tool="true" weight="0.4220963" />
+      <window_info anchor="bottom" id="Terminal" order="7" sideWeight="0.4990086" visible="true" weight="0.3542601" />
+      <window_info anchor="bottom" id="TODO" order="8" />
+      <window_info anchor="bottom" id="Docker" order="9" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="10" sideWeight="0.4990086" weight="0.37393767" />
+      <window_info anchor="bottom" id="TypeScript" order="11" sideWeight="0.49966952" weight="0.32847533" />
+      <window_info anchor="bottom" id="Event Log" order="12" sideWeight="0.50033045" side_tool="true" weight="0.4220963" />
+      <window_info anchor="bottom" id="GraphQL" order="13" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="Terminal" order="3" sideWeight="0.4990086" visible="true" weight="0.33221477" />
-      <window_info anchor="right" id="npm" order="4" sideWeight="0.43133047" weight="0.22281879" />
+      <window_info anchor="right" id="npm" order="3" sideWeight="0.43133047" weight="0.22281879" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -504,26 +564,13 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/server/src/server.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="629">
-          <caret line="41" column="17" selection-start-line="41" selection-start-column="17" selection-end-line="41" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/front/src/game.ts" />
     <entry file="file://$PROJECT_DIR$/front/node_modules/phaser3-docs/typescript/phaser.d.ts" />
     <entry file="file://$PROJECT_DIR$/front/package-lock.json" />
     <entry file="file://$PROJECT_DIR$/front/tsconfig.json" />
     <entry file="file://$PROJECT_DIR$/front/webpack.config.js" />
     <entry file="file://$PROJECT_DIR$/front/src/assets.ts" />
-    <entry file="file://$PROJECT_DIR$/server/build/static/index.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="360">
-          <caret line="23" column="7" selection-start-line="23" selection-start-column="7" selection-end-line="23" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/server/build/static/index.html" />
     <entry file="file://$PROJECT_DIR$/client/webpack.config.js">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-7">
@@ -531,37 +578,21 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/game.ts" />
     <entry file="file://$PROJECT_DIR$/package-lock.json">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/client/package.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
+        <state relative-caret-position="120">
           <caret line="8" column="33" selection-start-line="8" selection-start-column="33" selection-end-line="8" selection-end-column="40" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/lerna.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
+        <state relative-caret-position="120">
           <caret line="8" selection-start-line="8" selection-end-line="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/client/src/client.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="238">
-          <caret line="14" column="2" selection-start-line="14" selection-start-column="2" selection-end-line="14" selection-end-column="2" />
-          <folding>
-            <element signature="e#0#33#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/package.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="119">
-          <caret line="7" column="14" lean-forward="true" selection-start-line="7" selection-start-column="14" selection-end-line="7" selection-end-column="14" />
         </state>
       </provider>
     </entry>
@@ -570,15 +601,59 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/tsconfig.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="68">
-          <caret line="4" column="28" lean-forward="true" selection-start-line="4" selection-start-column="28" selection-end-line="4" selection-end-column="28" />
+        <state relative-caret-position="60">
+          <caret line="4" column="28" selection-start-line="4" selection-start-column="28" selection-end-line="4" selection-end-column="28" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/client/src/game.ts">
+    <entry file="file://$PROJECT_DIR$/package.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="102">
-          <caret line="246" column="40" lean-forward="true" selection-start-line="246" selection-start-column="40" selection-end-line="246" selection-end-column="40" />
+        <state relative-caret-position="255">
+          <caret line="17" selection-start-line="17" selection-end-line="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/build/index.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="495">
+          <caret line="87" selection-start-line="86" selection-end-line="87" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/phaser/types/phaser.d.ts">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/index.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="256">
+          <caret line="143" column="33" selection-start-line="143" selection-start-column="33" selection-end-line="143" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/client.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="166">
+          <caret line="33" column="47" selection-start-line="33" selection-start-column="47" selection-end-line="33" selection-end-column="47" />
+          <folding>
+            <element signature="e#0#34#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/server/src/server.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="171">
+          <caret line="139" column="14" lean-forward="true" selection-start-line="139" selection-start-column="14" selection-end-line="139" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/Game.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="126">
+          <caret line="581" column="30" lean-forward="true" selection-start-line="581" selection-start-column="30" selection-end-line="581" selection-end-column="30" />
+          <folding>
+            <element signature="e#0#182#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

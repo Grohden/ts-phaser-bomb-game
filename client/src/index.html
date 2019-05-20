@@ -84,9 +84,13 @@
             border: 4px solid #d6d6d6;
         }
 
-        #status-container {
-            flex-direction: row;
+        .state-playing #status-container {
             display: flex;
+        }
+
+        #status-container {
+            display: none;
+            flex-direction: row;
             padding: 10px 0;
         }
 
@@ -143,7 +147,7 @@
         </div>
         <div class="status-info">
             <img src="./gui/explosion.png">
-            <span id="explosion-count">2</span>
+            <span id="bomb-range">2</span>
         </div>
     </div>
 </div>

@@ -10,9 +10,9 @@ import {
   TPowerUpType
 } from "commons";
 import Phaser from "phaser";
-import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from "./alias";
-import { GroupManager } from "./GroupManager";
+import {ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS} from "./assets";
+import {GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject} from "./alias";
+import {GroupManager} from "./GroupManager";
 import Socket = SocketIOClient.Socket;
 
 const debug = true;
@@ -36,6 +36,8 @@ interface BombGameConfigs {
   parent: HTMLElement | string;
   onDeath: () => unknown;
   onStart: () => unknown;
+
+  onStatusUpdate(status: PlayerStatus): void;
 }
 
 interface SceneMap {
@@ -351,6 +353,10 @@ export class BombGame {
 
         if (registry) {
           registry.status = status;
+
+          if (status.id === this.playerId) {
+            this.gameConfigs.onStatusUpdate(status)
+          }
         }
       }
     );
@@ -571,7 +577,7 @@ export class BombGame {
   private setupPlayerBombAt(x: number, y: number) {
     const player = this.getCurrentPlayer();
 
-    if (this.spawnedBombCount >= player.status.maxBombCount) {
+    if (this.spawnedBombCount >= player.status.maxBombCount || player.isDead) {
       return;
     } else {
       this.spawnedBombCount++;

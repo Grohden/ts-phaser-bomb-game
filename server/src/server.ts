@@ -129,7 +129,7 @@ io.on('connection', function (socket) {
 
   socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
     const player = state.playerRegistry[playerId];
-    if (player) {
+    if (player && !player.isDead) {
       player.directions = directions
     }
   });
@@ -147,7 +147,7 @@ io.on('connection', function (socket) {
   socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
     const player = state.playerRegistry[playerId];
 
-    if (player) {
+    if (player && !player.isDead) {
       socket.broadcast.emit(SocketEvents.NewBombAt, {
         ...coords,
         range: player.status.bombRange
@@ -160,8 +160,7 @@ io.on('connection', function (socket) {
 
 
     const rand = Math.random() * 100;
-    console.log("Generated random ", rand);
-    if (rand <= 10 || rand >= 95) {
+    if (rand <= 10 || rand >= 90) {
       const randomPower = randomOfList(
         ["BombRange", "BombCount"] as TPowerUpType[]
       );
