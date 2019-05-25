@@ -49,3 +49,8 @@ the project and run:
  Here's a preview of me playing with myself (And i won!)
  
 ![](https://raw.githubusercontent.com/grohden/ts-phaser-bomb-game/master/records/lone-gameplay.gif)
+
+### Sprites
+
+All the sprites here are made by me, except the main char, 
+which is from the phaser tutorial, i only added more frames to it
