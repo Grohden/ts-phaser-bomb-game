@@ -43,3 +43,9 @@ the project and run:
  * `npm run start:fresh`
 
  After those, you can open the `localhost:5000` and enjoy your game :D
+ 
+ ### Preview 
+ 
+ Here's a preview of me playing with myself (And i won!)
+ 
+![](https://raw.githubusercontent.com/grohden/ts-phaser-bomb-game/master/records/lone-gameplay.gif)
