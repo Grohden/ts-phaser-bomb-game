@@ -144,7 +144,7 @@ io.on('connection', function (socket) {
     io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
   });
 
-  socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates) => {
+  socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates & { ownerId: string }) => {
     const player = state.playerRegistry[playerId];
 
     if (player && !player.isDead) {

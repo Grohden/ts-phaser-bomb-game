@@ -1,12 +1,12 @@
 import io from "socket.io-client";
-import {BombGame} from "./Game";
-import {PlayerStatus} from "commons";
+import { BombGame } from "./Game";
+import { PlayerStatus } from "commons";
 
 (function () {
     function startGame() {
         try {
             const socket = io();
-            new BombGame(socket, {
+            BombGame(socket, {
                 parent: 'game-container',
                 onDeath: showDeathMessage,
                 onStart: () => setState("state-playing"),
