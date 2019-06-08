@@ -1,7 +1,8 @@
 import express from 'express'
 import http from 'http'
 import path from 'path'
-import socketIO from 'socket.io'
+import socketIO, { Socket } from 'socket.io'
+import { initGameSocketListeners } from './game-socket-listeners'
 
 const app = express()
 const server = new http.Server(app)
@@ -36,26 +37,38 @@ server.listen(5000, function () {
 })
 
 let currentTimer: null | NodeJS.Timeout = null
-let playerCount = 0
-let timerCount = 30
-let gameRunning = false
+
+type TConItem = {
+  id: string,
+  socket: Socket
+}
+let playerList: TConItem[] = []
+let timerCount = 10
+let runningGame: ((playerId: string, socket: Socket) => void) | null = null
 
 function setupCountdown() {
   currentTimer && clearInterval(currentTimer)
-  timerCount = 30
+  timerCount = 10
 
   currentTimer = setInterval(function () {
     timerCount--
 
     if (timerCount > 0) {
       io.sockets.emit('ReadyForSessionCountDown', {
-        playerCount,
+        playerCount: playerList.length,
         timerCount
       })
     } else {
-      gameRunning = true
       io.sockets.emit('StartGame')
       currentTimer && clearInterval(currentTimer)
+
+      if (!runningGame) {
+        runningGame = initGameSocketListeners(io)
+      }
+
+      playerList.forEach(it => {
+        runningGame!(it.id, it.socket)
+      })
     }
   }, 1000)
 }
@@ -63,35 +76,39 @@ function setupCountdown() {
 io.on('connection', function (socket) {
   const playerId = socket.id //socket.request.socket.remoteAddress
 
-  if (gameRunning) {
+  if (runningGame) {
+    runningGame(playerId, socket)
   } else {
     let isReady = false
 
     socket.on('ReadyForSession', () => {
-      timerCount = 30
+      timerCount = 10
       isReady = true
-      playerCount++
+      playerList.push({
+        id: playerId,
+        socket
+      })
 
-      if (playerCount > 1) {
+      if (playerList.length > 1) {
         setupCountdown()
       }
     })
 
     socket.on('disconnect', () => {
       if (isReady) {
-        playerCount--
+        playerList = playerList.filter(it => it.id !== playerId)
       }
-      if (playerCount > 1) {
+
+      if (playerList.length > 1) {
         setupCountdown()
       } else {
         currentTimer && clearInterval(currentTimer)
 
-        timerCount = 30
+        timerCount = 10
         io.sockets.emit('ReadyForSessionCountDown', {
-          playerCount,
+          playerCount: playerList.length,
           timerCount
         })
-
       }
     })
   }

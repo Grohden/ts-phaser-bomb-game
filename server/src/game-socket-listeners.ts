@@ -12,11 +12,11 @@ import {
 import * as SocketIO from 'socket.io'
 import { Socket } from 'socket.io'
 
-function initGameSocketListeners(
-  io: SocketIO.Server,
-  socket: Socket,
-  playerId: string
-) {
+function randomOfList<T>(list: T[]): T {
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+export function initGameSocketListeners(io: SocketIO.Server) {
   const state: BackendState = {
     slots: {},
     playerRegistry: {},
@@ -24,10 +24,6 @@ function initGameSocketListeners(
   }
 
   type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
-
-  function randomOfList<T>(list: T[]): T {
-    return list[Math.floor(Math.random() * list.length)]
-  }
 
   function findRandomSlot(): TRandomSlot | undefined {
     const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2)
@@ -71,111 +67,115 @@ function initGameSocketListeners(
     }
   }
 
-  const position = findRandomSlot()
-  if (position) {
-    const newPlayer: PlayerRegistry = {
-      isDead: false,
-      slot: position.slot,
-      status: {
-        bombRange: 2,
-        maxBombCount: 1
-      },
-      directions: {
-        down: false,
-        left: false,
-        right: false,
-        up: false,
-        ...position
-      }
-    }
-
-    console.log(`New player ${ playerId } joins at x ${ newPlayer.directions.x } y ${ newPlayer.directions.x } on slot ${ [position.slot] }`)
-    state.slots[newPlayer.slot] = position
-    state.playerRegistry[playerId] = newPlayer
-
-    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
-    socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId })
-  } else {
-    socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
-  }
-
-  socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
-    const player = state.playerRegistry[playerId]
-    if (player && !player.isDead) {
-      player.directions = directions
-    }
-  })
-
-  socket.on(SocketEvents.Disconnect, () => {
-    const player = state.playerRegistry[playerId]
-    if (player) {
-      delete state.slots[player.slot]
-      delete state.playerRegistry[playerId]
-    }
-
-    io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
-  })
-
-  socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates & { ownerId: string }) => {
-    const player = state.playerRegistry[playerId]
-
-    if (player && !player.isDead) {
-      socket.broadcast.emit(SocketEvents.NewBombAt, {
-        ...coords,
-        range: player.status.bombRange
-      })
-    }
-  })
-
-  socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
-    state.destroyedWalls = state.destroyedWalls.concat(coordinates)
-
-    const rand = Math.random() * 100
-    if (rand <= 10 || rand >= 90) {
-      const randomPower = randomOfList(
-        ['BombRange', 'BombCount'] as TPowerUpType[]
-      )
-
-      const newPowerAt: TPowerUpInfo = {
-        ...coordinates,
-        powerUpType: randomPower
-      }
-
-      socket.emit(SocketEvents.NewPowerUpAt, newPowerAt)
-    }
-  })
-
-  socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
-    console.log('Player ', deadPlayerId, ' died')
-
-    if (deadPlayerId in state.playerRegistry) {
-      state.playerRegistry[deadPlayerId].isDead = true
-    }
-
-    socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
-  })
-
-  socket.on(SocketEvents.PowerUpCollected, (info: { id: string, type: TPowerUpType }) => {
-    const player = state.playerRegistry[playerId]
-
-    if (player) {
-      switch (info.type) {
-        case 'BombRange':
-          player.status.bombRange++
-          break
-        case 'BombCount':
-          player.status.maxBombCount++
-          break
-      }
-
-      socket.emit(SocketEvents.PlayerStatusUpdate, {
-        id: info.id,
-        ...player.status
-      })
-    }
-  })
-
   setInterval(function () {
     io.sockets.emit(SocketEvents.StateUpdate, state)
   }, SERVER_UPDATE_INTERVAL)
+
+  return function (playerId: string, socket: Socket) {
+    socket.on('ReadyForEvents', () => {
+      const position = findRandomSlot()
+      if (position) {
+        const newPlayer: PlayerRegistry = {
+          isDead: false,
+          slot: position.slot,
+          status: {
+            bombRange: 2,
+            maxBombCount: 1
+          },
+          directions: {
+            down: false,
+            left: false,
+            right: false,
+            up: false,
+            ...position
+          }
+        }
+
+        console.log(`New player ${ playerId } joins at x ${ newPlayer.directions.x } y ${ newPlayer.directions.x } on slot ${ [position.slot] }`)
+        state.slots[newPlayer.slot] = position
+        state.playerRegistry[playerId] = newPlayer
+
+        socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
+        socket.broadcast.emit(SocketEvents.NewPlayer, { ...newPlayer, id: playerId })
+      } else {
+        socket.emit(SocketEvents.InitWithState, { ...state, id: playerId })
+      }
+    })
+
+    socket.on(SocketEvents.Movement, (directions: PlayerDirections) => {
+      const player = state.playerRegistry[playerId]
+      if (player && !player.isDead) {
+        player.directions = directions
+      }
+    })
+
+    socket.on(SocketEvents.Disconnect, () => {
+      const player = state.playerRegistry[playerId]
+      if (player) {
+        delete state.slots[player.slot]
+        delete state.playerRegistry[playerId]
+      }
+
+      io.sockets.emit(SocketEvents.PlayerDisconnect, playerId)
+    })
+
+    socket.on(SocketEvents.NewBombAt, (coords: SimpleCoordinates & { ownerId: string }) => {
+      const player = state.playerRegistry[playerId]
+
+      if (player && !player.isDead) {
+        socket.broadcast.emit(SocketEvents.NewBombAt, {
+          ...coords,
+          range: player.status.bombRange
+        })
+      }
+    })
+
+    socket.on(SocketEvents.WallDestroyed, (coordinates: SimpleCoordinates) => {
+      state.destroyedWalls = state.destroyedWalls.concat(coordinates)
+
+      const rand = Math.random() * 100
+      if (rand <= 10 || rand >= 90) {
+        const randomPower = randomOfList(
+          ['BombRange', 'BombCount'] as TPowerUpType[]
+        )
+
+        const newPowerAt: TPowerUpInfo = {
+          ...coordinates,
+          powerUpType: randomPower
+        }
+
+        io.sockets.emit(SocketEvents.NewPowerUpAt, newPowerAt)
+      }
+    })
+
+    socket.on(SocketEvents.PlayerDied, (deadPlayerId: string) => {
+      console.log('Player ', deadPlayerId, ' died')
+
+      if (deadPlayerId in state.playerRegistry) {
+        state.playerRegistry[deadPlayerId].isDead = true
+      }
+
+      socket.broadcast.emit(SocketEvents.PlayerDied, deadPlayerId)
+    })
+
+    socket.on(SocketEvents.PowerUpCollected, (info: { id: string, type: TPowerUpType }) => {
+      const player = state.playerRegistry[playerId]
+
+      if (player) {
+        switch (info.type) {
+          case 'BombRange':
+            player.status.bombRange++
+            break
+          case 'BombCount':
+            player.status.maxBombCount++
+            break
+        }
+
+        socket.emit(SocketEvents.PlayerStatusUpdate, {
+          id: info.id,
+          ...player.status
+        })
+      }
+    })
+  }
 }

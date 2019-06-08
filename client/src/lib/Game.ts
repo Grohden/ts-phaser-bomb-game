@@ -15,7 +15,7 @@ import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGa
 import { GroupManager } from './GroupManager'
 import Socket = SocketIOClient.Socket
 
-const debug = true;
+const debug = true
 
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
@@ -49,81 +49,80 @@ interface SceneMap {
 type TNewBombInfo = SimpleCoordinates & { range: number };
 
 function inRange(r: { min: number; max: number; value: number }) {
-  return r.value >= r.min && r.value <= r.max;
+  return r.value >= r.min && r.value <= r.max
 }
 
 function gridUnitToPixel(value: number, baseGridSize: number) {
-  return value * baseGridSize + baseGridSize / 2;
+  return value * baseGridSize + baseGridSize / 2
 }
 
 function makeKey({ x, y }: SimpleCoordinates) {
-  return `${ x }-${ y }`;
+  return `${ x }-${ y }`
 }
 
 function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
-  const { tileWidth, tileHeight } = GameDimensions;
+  const { tileWidth, tileHeight } = GameDimensions
   return {
     x: Math.floor(coords.x / tileWidth),
     // +(tileHeight / 2) is a precision fix :D
     y: Math.floor((coords.y + tileHeight / 2) / tileHeight)
-  };
+  }
 }
 
 export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
   const playerSpeed = 160
-  let spawnedBombCount = 0;
-  let playerId: string;
-  let phaserInstance: Phaser.Game;
-  let backgroundMap: SceneMap;
-  let breakableMap: SceneMap;
-  let currentScene: GameScene;
-  let wallsMap: SceneMap;
+  let spawnedBombCount = 0
+  let playerId: string
+  let phaserInstance: Phaser.Game
+  let backgroundMap: SceneMap
+  let breakableMap: SceneMap
+  let currentScene: GameScene
+  let wallsMap: SceneMap
   let groups: GroupManager
-  const bombMap: BombMap = {};
-  const explosionMap: { [xy: string]: GameSprite } = {};
+  const bombMap: BombMap = {}
+  const explosionMap: { [xy: string]: GameSprite } = {}
   const playerRegistry: {
     [id: string]: PlayerRegistry & {
       player: Phaser.Physics.Arcade.Sprite;
     };
-  } = {};
-
+  } = {}
 
   const makeDefaultTileMap = (key: string, imageName: string): SceneMap => {
     const map = currentScene.make.tilemap({
       key,
       tileWidth: GameDimensions.tileWidth,
       tileHeight: GameDimensions.tileHeight
-    });
+    })
 
-    const tiles = map.addTilesetImage(imageName);
-    const layer = map.createDynamicLayer(0, tiles, 0, 0);
+    const tiles = map.addTilesetImage(imageName)
+    const layer = map.createDynamicLayer(0, tiles, 0, 0)
 
-    return { layer, map, tiles };
-  };
+    return { layer, map, tiles }
+  }
 
   const preload = () => {
-    const scene = currentScene;
-    scene.load.image(MAIN_TILES, "assets/tileset.png");
-    scene.load.tilemapCSV(MAPS.BACKGROUND, "assets/map_background.csv");
-    scene.load.tilemapCSV(MAPS.WALLS, "assets/map_walls.csv");
-    scene.load.tilemapCSV(MAPS.BREAKABLES, "assets/map_breakables.csv");
-    scene.load.spritesheet(ASSETS.PLAYER, "assets/dude.png", {
+    const scene = currentScene
+    scene.load.image(MAIN_TILES, 'assets/tileset.png')
+    scene.load.tilemapCSV(MAPS.BACKGROUND, 'assets/map_background.csv')
+    scene.load.tilemapCSV(MAPS.WALLS, 'assets/map_walls.csv')
+    scene.load.tilemapCSV(MAPS.BREAKABLES, 'assets/map_breakables.csv')
+    scene.load.spritesheet(ASSETS.PLAYER, 'assets/dude.png', {
       frameWidth: GameDimensions.playerWidth,
       frameHeight: GameDimensions.playerHeight
     });
 
     [
-      [ASSETS.BOMB, "assets/bomb.png"],
-      [ASSETS.EXPLOSION, "assets/explosion.png"],
-      [ASSETS.BOMB_COUNT_POWERUP, "assets/bomb_count_powerup.png"],
-      [ASSETS.BOMB_RANGE_POWERUP, "assets/bomb_range_powerup.png"]
+      [ASSETS.BOMB, 'assets/bomb.png'],
+      [ASSETS.EXPLOSION, 'assets/explosion.png'],
+      [ASSETS.BOMB_COUNT_POWERUP, 'assets/bomb_count_powerup.png'],
+      [ASSETS.BOMB_RANGE_POWERUP, 'assets/bomb_range_powerup.png']
     ].forEach(([assetName, assetPath]) => {
       scene.load.spritesheet(assetName, assetPath, {
         frameWidth: GameDimensions.tileWidth,
         frameHeight: GameDimensions.tileHeight
-      });
-    });
-  };
+      })
+    })
+  }
 
   const applyPhysicsAndAnimations = (
     sprite: GamePhysicsSprite,
@@ -131,42 +130,41 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
   ) => {
     if (left) {
       sprite.setVelocityX(-playerSpeed)
-      sprite.anims.play(ANIMATIONS.PLAYER_TURN_LEFT, true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_LEFT, true)
     } else if (right) {
       sprite.setVelocityX(playerSpeed)
-      sprite.anims.play(ANIMATIONS.PLAYER_TURN_RIGHT, true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_RIGHT, true)
     } else {
-      sprite.setVelocityX(0);
+      sprite.setVelocityX(0)
     }
 
     if (down) {
       sprite.setVelocityY(-playerSpeed)
-      sprite.anims.play(ANIMATIONS.PLAYER_TURN_DOWN, true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_DOWN, true)
     } else if (up) {
       sprite.setVelocityY(playerSpeed)
-      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP, true);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP, true)
     } else {
-      sprite.setVelocityY(0);
+      sprite.setVelocityY(0)
     }
 
     if (!down && !up && !left && !right) {
-      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP);
+      sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP)
     }
-  };
-
+  }
 
   const makeMaps = () => {
     // Background
-    backgroundMap = makeDefaultTileMap(MAPS.BACKGROUND, MAIN_TILES);
+    backgroundMap = makeDefaultTileMap(MAPS.BACKGROUND, MAIN_TILES)
 
     // Walls
-    wallsMap = makeDefaultTileMap(MAPS.WALLS, MAIN_TILES);
-    wallsMap.map.setCollisionBetween(0, 2);
+    wallsMap = makeDefaultTileMap(MAPS.WALLS, MAIN_TILES)
+    wallsMap.map.setCollisionBetween(0, 2)
 
     // Breakables
-    breakableMap = makeDefaultTileMap(MAPS.BREAKABLES, MAIN_TILES);
-    breakableMap.map.setCollisionBetween(0, 2);
-  };
+    breakableMap = makeDefaultTileMap(MAPS.BREAKABLES, MAIN_TILES)
+    breakableMap.map.setCollisionBetween(0, 2)
+  }
 
   const initPhaser = (state: BackendState & { id: string }) => {
     phaserInstance = new Phaser.Game({
@@ -175,7 +173,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       width: GameDimensions.gameWidth,
       height: GameDimensions.gameHeight,
       physics: {
-        default: "arcade",
+        default: 'arcade',
         arcade: {
           gravity: {},
           debug
@@ -183,21 +181,21 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       },
       scene: {
         preload: function (this: GameScene) {
-          currentScene = this;
-          preload();
+          currentScene = this
+          preload()
         },
         create: function (this: GameScene) {
-          currentScene = this;
-          create(state);
-          gameConfigs.onStart();
+          currentScene = this
+          create(state)
+          gameConfigs.onStart()
         },
         update: function (this: GameScene) {
-          currentScene = this;
-          update();
+          currentScene = this
+          update()
         }
       }
-    });
-  };
+    })
+  }
 
   const fabricPlayer = (
     id: string,
@@ -208,86 +206,79 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       directions.y,
       ASSETS.PLAYER,
       1
-    );
+    )
 
-    player.setBounce(1.2);
-    player.setCollideWorldBounds(true);
+    player.setBounce(1.2)
+    player.setCollideWorldBounds(true)
 
-    groups.addPlayer(player, id);
+    groups.addPlayer(player, id)
 
     // TODO: put this in the group
-    currentScene.physics.add.collider(player, breakableMap.layer);
-    currentScene.physics.add.collider(player, wallsMap.layer);
+    currentScene.physics.add.collider(player, breakableMap.layer)
+    currentScene.physics.add.collider(player, wallsMap.layer)
 
     // Make the collision height smaller
-    const radius = GameDimensions.playerBoxRadius;
+    const radius = GameDimensions.playerBoxRadius
     player.body.setCircle(
       radius,
       (GameDimensions.playerWidth - radius * 2) / 2,
       GameDimensions.playerHeight - radius * 2
-    );
+    )
 
-    return player;
-  };
+    return player
+  }
 
   const initWithState = (state: BackendState & { id: string }) => {
-    playerId = socket.id; // state.id;
-    groups = new GroupManager(() => currentScene);
-
-    for (const [id, data] of Object.entries(state.playerRegistry)) {
-      playerRegistry[id] = {
-        ...data,
-        player: fabricPlayer(id, data.directions)
-      };
-    }
+    playerId = socket.id // state.id;
+    groups = new GroupManager(() => currentScene)
 
     for (const { x, y } of state.destroyedWalls) {
-      breakableMap.map.removeTileAt(x, y);
+      breakableMap.map.removeTileAt(x, y)
     }
 
     groups
       .registerBombCollider()
       .onPlayerPowerUpCatch(processPowerUpCatch)
-      .onPlayerExploded(processPlayerDeath);
-  };
+      .onPlayerExploded(processPlayerDeath)
+  }
 
   const processPowerUpCatch = (
     player: TPlayerGameObject,
     powerUp: TPowerUpGameObject
   ) => {
-    const id = player.id!;
-    const registry = playerRegistry[player.id!];
+    const id = player.id!
+    const registry = playerRegistry[player.id!]
 
     if (registry) {
       if (playerId === id) {
         socket.emit(SocketEvents.PowerUpCollected, {
           id,
           type: powerUp.powerUpType!
-        });
+        })
       }
     } else {
-      debug && console.debug("Registry not found ", id);
+      debug && console.debug('Registry not found ', id)
     }
 
     // Remove the power up sprite
-    powerUp.destroy(true);
-  };
+    powerUp.destroy(true)
+  }
 
   const processPlayerDeath = (id: string) => {
-    const registry = playerRegistry[id];
+    const registry = playerRegistry[id]
 
     // To not overload the server, only the player itself can say
     // that he/she was killed
     if (registry) {
       if (!registry.isDead && playerId === id) {
-        registry.isDead = true;
-        socket.emit(SocketEvents.PlayerDied, id);
-        gameConfigs.onDeath();
+        registry.isDead = true
+        socket.emit(SocketEvents.PlayerDied, id)
+        gameConfigs.onDeath()
       }
     } else {
-      debug && console.debug("Registry not found ", id);
+      debug && console.debug('Registry not found ', id)
     }
-  };
+  }
 
   const initSocketListeners = () => {
     socket.on(
@@ -296,69 +287,76 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
         playerRegistry[registry.id] = {
           ...registry,
           player: fabricPlayer(registry.id, registry.directions)
-        };
+        }
       }
-    );
+    )
 
     socket.on(SocketEvents.PlayerDisconnect, (playerId: string) => {
-      const registry = playerRegistry[playerId];
+      const registry = playerRegistry[playerId]
       if (registry) {
-        registry.player.destroy(true);
-        delete playerRegistry[playerId];
+        registry.player.destroy(true)
+        delete playerRegistry[playerId]
       }
-    });
+    })
 
     socket.on(SocketEvents.PlayerDied, (playerId: string) => {
-      const registry = playerRegistry[playerId];
+      const registry = playerRegistry[playerId]
       if (registry) {
         // registry.player.destroy(true);
         // delete playerRegistry[playerId];
       }
-    });
+    })
 
     socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
       for (const [id, data] of Object.entries(backState.playerRegistry)) {
+        if (!playerRegistry[id]) {
+          playerRegistry[id] = {
+            ...data,
+            player: fabricPlayer(id, data.directions)
+          }
+        }
+
         if (playerId !== id) {
-          playerRegistry[id].directions = data.directions;
+          playerRegistry[id].directions = data.directions
         }
       }
-    });
+    })
 
     socket.on(
-        SocketEvents.PlayerStatusUpdate,
+      SocketEvents.PlayerStatusUpdate,
       (status: PlayerStatus & { id: string }) => {
-        const registry = playerRegistry[status.id];
+        const registry = playerRegistry[status.id]
 
         if (registry) {
-          registry.status = status;
+          registry.status = status
 
           if (status.id === playerId) {
             gameConfigs.onStatusUpdate(status)
           }
         }
       }
-    );
+    )
 
     socket.on(SocketEvents.NewBombAt, (info: TNewBombInfo) => {
-      setupBombAt(info);
-    });
+      setupBombAt(info)
+    })
 
     socket.on(SocketEvents.NewPowerUpAt, (info: TPowerUpInfo) => {
-      placePowerUpAt(info);
-    });
+      placePowerUpAt(info)
+    })
 
     socket.on(
       SocketEvents.WallDestroyed,
       ({ x, y }: SimpleCoordinates) => {
-        breakableMap.map.removeTileAt(x, y);
+        breakableMap.map.removeTileAt(x, y)
       }
-    );
-  };
+    )
+  }
 
   const create = (state: BackendState & { id: string }) => {
-    makeMaps();
-    initWithState(state);
-    initSocketListeners();
+    makeMaps()
+    initWithState(state)
+    initSocketListeners()
     const scene = currentScene;
 
     [
@@ -374,8 +372,8 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
         }),
         frameRate: 2,
         repeat: -1
-      });
-    });
+      })
+    })
 
     // Player animations
     scene.anims.create({
@@ -386,7 +384,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       }),
       frameRate: 10,
       repeat: -1
-    });
+    })
 
     scene.anims.create({
       key: ANIMATIONS.PLAYER_TURN_RIGHT,
@@ -396,7 +394,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       }),
       frameRate: 10,
       repeat: -1
-    });
+    })
 
     scene.anims.create({
       key: ANIMATIONS.PLAYER_TURN_UP,
@@ -406,7 +404,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       }),
       frameRate: 5,
       repeat: -1
-    });
+    })
 
     scene.anims.create({
       key: ANIMATIONS.PLAYER_TURN_DOWN,
@@ -416,19 +414,19 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       }),
       frameRate: 5,
       repeat: -1
-    });
-  };
+    })
+  }
 
   const hasAnyWallAt = (gridX: number, gridY: number) => {
     return (
       wallsMap.map.hasTileAt(gridX, gridY) ||
       breakableMap.map.hasTileAt(gridX, gridY)
-    );
-  };
+    )
+  }
 
   const hasBreakableWallAt = (gridX: number, gridY: number) => {
-    return breakableMap.map.hasTileAt(gridX, gridY);
-  };
+    return breakableMap.map.hasTileAt(gridX, gridY)
+  }
 
   const addExplosionSprite = ({ pixX, pixY, gridX, gridY }: {
     pixX: number;
@@ -436,189 +434,189 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     gridX: number;
     gridY: number;
   }): { key: string; sprite: GameSprite } => {
-    const sprite = currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION);
-    const killer = currentScene.physics.add.existing(sprite, true);
-    const physicsBody = (killer.body as unknown) as Phaser.Physics.Arcade.Body;
-    physicsBody.setCircle(GameDimensions.tileHeight / 2);
+    const sprite = currentScene.add.sprite(pixX, pixY, ASSETS.EXPLOSION)
+    const killer = currentScene.physics.add.existing(sprite, true)
+    const physicsBody = (killer.body as unknown) as Phaser.Physics.Arcade.Body
+    physicsBody.setCircle(GameDimensions.tileHeight / 2)
 
-    groups.addExplosion(killer);
-    const key = makeKey({ x: gridX, y: gridY });
+    groups.addExplosion(killer)
+    const key = makeKey({ x: gridX, y: gridY })
 
-    return { key, sprite };
-  };
+    return { key, sprite }
+  }
 
   const putAndExplodeAdjacent = (
     cache: ExplosionCache,
     gridX: number,
     gridY: number
   ) => {
-    const { tileWidth, tileHeight } = GameDimensions;
+    const { tileWidth, tileHeight } = GameDimensions
 
     if (hasBombAt({ x: gridX, y: gridY })) {
-      console.log(`Found a bomb at ${ gridX } - ${ gridY }, delegated to it`);
+      console.log(`Found a bomb at ${ gridX } - ${ gridY }, delegated to it`)
       // Let the next bomb deal with things
-      explodeBombAt(gridX, gridY);
-      return true;
+      explodeBombAt(gridX, gridY)
+      return true
     } else if (hasExplosionAt({ x: gridX, y: gridY })) {
-      console.log(`Found a explosion at ${ gridX } - ${ gridY }, stopping`);
-      return true;
+      console.log(`Found a explosion at ${ gridX } - ${ gridY }, stopping`)
+      return true
     } else if (hasAnyWallAt(gridX, gridY)) {
       // No Explosions at walls
 
       if (hasBreakableWallAt(gridX, gridY)) {
         // Breakable is replaced by a explosion
-        const pixX = gridUnitToPixel(gridX, tileWidth);
-        const pixY = gridUnitToPixel(gridY, tileHeight);
+        const pixX = gridUnitToPixel(gridX, tileWidth)
+        const pixY = gridUnitToPixel(gridY, tileHeight)
 
         const { key, sprite } = addExplosionSprite({
           pixX,
           pixY,
           gridX,
           gridY
-        });
-        cache.push({ sprite, key });
-        explosionMap[key] = sprite;
+        })
+        cache.push({ sprite, key })
+        explosionMap[key] = sprite
 
-        destroyWallAt(gridX, gridY);
+        destroyWallAt(gridX, gridY)
       }
 
-      return true;
+      return true
     } else {
-      const pixX = gridUnitToPixel(gridX, tileWidth);
-      const pixY = gridUnitToPixel(gridY, tileHeight);
+      const pixX = gridUnitToPixel(gridX, tileWidth)
+      const pixY = gridUnitToPixel(gridY, tileHeight)
 
       const { key, sprite } = addExplosionSprite({
         pixX,
         pixY,
         gridX,
         gridY
-      });
+      })
 
-      cache.push({ sprite, key });
-      explosionMap[key] = sprite;
+      cache.push({ sprite, key })
+      explosionMap[key] = sprite
 
-      return false;
+      return false
     }
-  };
+  }
 
   const putExplosionAt = (x: number, y: number, range: number) => {
-    const explosions: ExplosionCache = [];
+    const explosions: ExplosionCache = []
 
     // The bomb itself
-    putAndExplodeAdjacent(explosions, x, y);
+    putAndExplodeAdjacent(explosions, x, y)
 
     for (let i = x + 1; i <= x + range; i++) {
-      const foundObstacle = putAndExplodeAdjacent(explosions, i, y);
+      const foundObstacle = putAndExplodeAdjacent(explosions, i, y)
       if (foundObstacle) {
-        break;
+        break
       }
     }
 
     for (let i = x - 1; i >= x - range; i--) {
-      const foundObstacle = putAndExplodeAdjacent(explosions, i, y);
+      const foundObstacle = putAndExplodeAdjacent(explosions, i, y)
       if (foundObstacle) {
-        break;
+        break
       }
     }
 
     for (let i = y + 1; i <= y + range; i++) {
-      const foundObstacle = putAndExplodeAdjacent(explosions, x, i);
+      const foundObstacle = putAndExplodeAdjacent(explosions, x, i)
       if (foundObstacle) {
-        break;
+        break
       }
     }
 
     for (let i = y - 1; i >= y - range; i--) {
-      const foundObstacle = putAndExplodeAdjacent(explosions, x, i);
+      const foundObstacle = putAndExplodeAdjacent(explosions, x, i)
       if (foundObstacle) {
-        break;
+        break
       }
     }
 
     setTimeout(() => {
       explosions.forEach(({ sprite, key }) => {
-        sprite.destroy(true);
-        delete explosionMap[key];
-      });
-    }, 400);
-  };
+        sprite.destroy(true)
+        delete explosionMap[key]
+      })
+    }, 400)
+  }
 
   const destroyWallAt = (x: number, y: number) => {
-    breakableMap.map.removeTileAt(x, y);
-    socket.emit(SocketEvents.WallDestroyed, { x, y });
-  };
+    breakableMap.map.removeTileAt(x, y)
+    socket.emit(SocketEvents.WallDestroyed, { x, y })
+  }
 
   const getCurrentPlayer = () => {
-    return playerRegistry[playerId];
-  };
+    return playerRegistry[playerId]
+  }
 
   const setupPlayerBombAt = (x: number, y: number) => {
-    const player = getCurrentPlayer();
+    const player = getCurrentPlayer()
 
     if (spawnedBombCount >= player.status.maxBombCount || player.isDead) {
-      return;
+      return
     } else {
-      spawnedBombCount++;
-      registerBombAt(x, y, player.status.bombRange);
-      socket.emit(SocketEvents.NewBombAt, { x, y, ownerId: playerId });
+      spawnedBombCount++
+      registerBombAt(x, y, player.status.bombRange)
+      socket.emit(SocketEvents.NewBombAt, { x, y, ownerId: playerId })
 
       setTimeout(() => {
-        explodeBombAt(x, y);
-        spawnedBombCount--;
-      }, BOMB_TIME);
+        explodeBombAt(x, y)
+        spawnedBombCount--
+      }, BOMB_TIME)
     }
-  };
+  }
 
   const setupBombAt = ({ x, y, range }: TNewBombInfo) => {
-    registerBombAt(x, y, range);
+    registerBombAt(x, y, range)
     setTimeout(() => {
-      explodeBombAt(x, y);
-    }, BOMB_TIME);
-  };
+      explodeBombAt(x, y)
+    }, BOMB_TIME)
+  }
 
   const registerBombAt = (x: number, y: number, range: number) => {
-    const { tileWidth, tileHeight } = GameDimensions;
-    const nX = gridUnitToPixel(x, tileWidth);
-    const nY = gridUnitToPixel(y, tileHeight);
-    const newBomb = currentScene.add.sprite(nX, nY, ASSETS.BOMB, 1);
-    const key = makeKey({ x, y });
+    const { tileWidth, tileHeight } = GameDimensions
+    const nX = gridUnitToPixel(x, tileWidth)
+    const nY = gridUnitToPixel(y, tileHeight)
+    const newBomb = currentScene.add.sprite(nX, nY, ASSETS.BOMB, 1)
+    const key = makeKey({ x, y })
 
-    bombMap[key] = { sprite: newBomb, range };
+    bombMap[key] = { sprite: newBomb, range }
 
-    const bombCollide = currentScene.physics.add.existing(newBomb, true);
-    groups.addBomb(bombCollide);
-  };
+    const bombCollide = currentScene.physics.add.existing(newBomb, true)
+    groups.addBomb(bombCollide)
+  }
 
   const explodeBombAt = (gridX: number, gridY: number) => {
-    const key = makeKey({ x: gridX, y: gridY });
+    const key = makeKey({ x: gridX, y: gridY })
 
     if (hasBombAt({ x: gridX, y: gridY })) {
-      const bomb = bombMap[key];
-      bomb.sprite.destroy(true);
-      delete bombMap[key];
+      const bomb = bombMap[key]
+      bomb.sprite.destroy(true)
+      delete bombMap[key]
 
-      putExplosionAt(gridX, gridY, bomb.range);
+      putExplosionAt(gridX, gridY, bomb.range)
     }
-  };
+  }
 
   const hasBombAt = (coords: SimpleCoordinates): boolean => {
-    return makeKey(coords) in bombMap;
-  };
+    return makeKey(coords) in bombMap
+  }
 
   const hasExplosionAt = (coords: SimpleCoordinates): boolean => {
-    return makeKey(coords) in explosionMap;
-  };
+    return makeKey(coords) in explosionMap
+  }
 
   const update = () => {
-    const scene = currentScene;
+    const scene = currentScene
 
-    groups.playAnimations();
+    groups.playAnimations()
 
     for (const [id, registry] of Object.entries(playerRegistry)) {
-      const { player, directions } = registry;
+      const { player, directions } = registry
 
       if (playerId === id) {
-        const cursors = scene.input.keyboard.createCursorKeys();
+        const cursors = scene.input.keyboard.createCursorKeys()
 
         if (playerRegistry[id].isDead) {
           Object.assign(directions, {
@@ -628,7 +626,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
             up: false,
             x: player.x,
             y: player.y
-          });
+          })
         } else {
           Object.assign(directions, {
             left: cursors.left!.isDown,
@@ -637,70 +635,70 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
             up: cursors.down!.isDown,
             x: player.x,
             y: player.y
-          });
+          })
         }
 
         // BombGame.applyPhysicsAndAnimations(player, directions);
 
         if (cursors.space!.isDown) {
-          const { x, y } = findPlayerMapPosition(player);
+          const { x, y } = findPlayerMapPosition(player)
           if (!hasBombAt({ x, y })) {
-            setupPlayerBombAt(x, y);
+            setupPlayerBombAt(x, y)
           }
         }
       }
       // Fixes some position imprecision (from player animations)
-      const tolerance = 10;
+      const tolerance = 10
       const isXOk = inRange({
         min: directions.x - tolerance,
         max: directions.x + tolerance,
         value: player.x
-      });
+      })
       const isYOk = inRange({
         min: directions.y - tolerance,
         max: directions.y + tolerance,
         value: player.y
-      });
+      })
 
       if (!isXOk || !isYOk) {
-        player.x = directions.x;
-        player.y = directions.y;
+        player.x = directions.x
+        player.y = directions.y
       } else {
-        applyPhysicsAndAnimations(player, directions);
+        applyPhysicsAndAnimations(player, directions)
       }
     }
 
     // Update server
     const player = getCurrentPlayer()
     if (player) {
-      socket.emit(SocketEvents.Movement, player.directions);
+      socket.emit(SocketEvents.Movement, player.directions)
     }
-  };
+  }
 
   const getPowerAsset = (type: TPowerUpType) => {
     switch (type) {
-      case "BombCount":
-        return ASSETS.BOMB_COUNT_POWERUP;
-      case "BombRange":
-        return ASSETS.BOMB_COUNT_POWERUP;
+      case 'BombCount':
+        return ASSETS.BOMB_COUNT_POWERUP
+      case 'BombRange':
+        return ASSETS.BOMB_COUNT_POWERUP
     }
-  };
+  }
 
   const placePowerUpAt = (info: TPowerUpInfo) => {
-    const { tileWidth, tileHeight } = GameDimensions;
-    const pixX = gridUnitToPixel(info.x, tileWidth);
-    const pixY = gridUnitToPixel(info.y, tileHeight);
+    const { tileWidth, tileHeight } = GameDimensions
+    const pixX = gridUnitToPixel(info.x, tileWidth)
+    const pixY = gridUnitToPixel(info.y, tileHeight)
 
     const powerUp = currentScene.add.sprite(
       pixX,
       pixY,
       getPowerAsset(info.powerUpType),
       1
-    );
+    )
 
-    const collider = currentScene.physics.add.existing(powerUp, true);
-    groups.addPowerUp(collider, info.powerUpType);
-  };
+    const collider = currentScene.physics.add.existing(powerUp, true)
+    groups.addPowerUp(collider, info.powerUpType)
+  }
 
   const startGame = () => {
     socket.on(
@@ -708,11 +706,12 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       (state: BackendState & { id: string }) => {
         // Happens at server restarts
         if (!phaserInstance) {
-          initPhaser(state);
+          initPhaser(state)
         }
       }
-    );
-  };
+    )
+    socket.emit('ReadyForEvents')
+  }
 
   return { startGame }
 }
