@@ -49,6 +49,7 @@ the project and run:
  Here's a preview of me playing with myself (And i won!)
  
 ![](https://raw.githubusercontent.com/grohden/ts-phaser-bomb-game/master/records/lone-gameplay.gif)
+(I've recorded this with a bug btw)
 
 ### Sprites
 

@@ -8,12 +8,12 @@ import {
   SocketEvents,
   TPowerUpInfo,
   TPowerUpType
-} from "commons";
-import Phaser from "phaser";
-import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from "./alias";
-import { GroupManager } from "./GroupManager";
-import Socket = SocketIOClient.Socket;
+} from 'commons'
+import Phaser from 'phaser'
+import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from './assets'
+import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from '../alias'
+import { GroupManager } from './GroupManager'
+import Socket = SocketIOClient.Socket
 
 const debug = true;
 
@@ -70,6 +70,7 @@ function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
 }
 
 export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
+  const playerSpeed = 160
   let spawnedBombCount = 0;
   let playerId: string;
   let phaserInstance: Phaser.Game;
@@ -77,8 +78,8 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
   let breakableMap: SceneMap;
   let currentScene: GameScene;
   let wallsMap: SceneMap;
+  let groups: GroupManager
   const bombMap: BombMap = {};
-  let groups: GroupManager;
   const explosionMap: { [xy: string]: GameSprite } = {};
   const playerRegistry: {
     [id: string]: PlayerRegistry & {
@@ -128,22 +129,21 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     sprite: GamePhysicsSprite,
     { left, right, down, up }: Directions
   ) => {
-    const velocity = 160;
     if (left) {
-      sprite.setVelocityX(-velocity);
+      sprite.setVelocityX(-playerSpeed)
       sprite.anims.play(ANIMATIONS.PLAYER_TURN_LEFT, true);
     } else if (right) {
-      sprite.setVelocityX(velocity);
+      sprite.setVelocityX(playerSpeed)
       sprite.anims.play(ANIMATIONS.PLAYER_TURN_RIGHT, true);
     } else {
       sprite.setVelocityX(0);
     }
 
     if (down) {
-      sprite.setVelocityY(-velocity);
+      sprite.setVelocityY(-playerSpeed)
       sprite.anims.play(ANIMATIONS.PLAYER_TURN_DOWN, true);
     } else if (up) {
-      sprite.setVelocityY(velocity);
+      sprite.setVelocityY(playerSpeed)
       sprite.anims.play(ANIMATIONS.PLAYER_TURN_UP, true);
     } else {
       sprite.setVelocityY(0);
@@ -671,7 +671,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     }
 
     // Update server
-    const player = playerRegistry[playerId];
+    const player = getCurrentPlayer()
     if (player) {
       socket.emit(SocketEvents.Movement, player.directions);
     }

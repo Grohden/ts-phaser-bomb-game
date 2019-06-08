@@ -6,9 +6,9 @@ import {
   TPlayerGameObject,
   TPowerUpGameObject,
   TypedSpriteGroup
-} from "./alias";
-import { TPowerUpType } from "commons";
-import { ANIMATIONS } from "./assets";
+} from '../alias'
+import { TPowerUpType } from 'commons'
+import { ANIMATIONS } from './assets'
 
 export class GroupManager {
   private readonly provider: () => GameScene;
