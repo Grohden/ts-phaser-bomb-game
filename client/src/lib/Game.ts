@@ -33,11 +33,13 @@ interface Directions {
 }
 
 interface BombGameConfigs {
-  parent: HTMLElement | string;
-  onDeath: () => unknown;
-  onStart: () => unknown;
+  parent: HTMLElement | string
+  onDeath: () => unknown
+  onStart: () => unknown
 
-  onStatusUpdate(status: PlayerStatus): void;
+  onStatusUpdate(status: PlayerStatus): void
+
+  onUpdateTime(remainingTime: number): void
 }
 
 interface SceneMap {
@@ -308,6 +310,8 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     })
 
     socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
+      gameConfigs.onUpdateTime(backState.remainingTime)
+
       for (const [id, data] of Object.entries(backState.playerRegistry)) {
         if (!playerRegistry[id]) {
           playerRegistry[id] = {

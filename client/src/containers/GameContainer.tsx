@@ -21,14 +21,17 @@ const styles = createStyle({
 })
 
 const GameContainer = (props: TProps) => {
+  const [remainingTime, setRemainingTime] = useState(300)
   const [status, setStatus] = useState<PlayerStatus>({
     maxBombCount: 1,
     bombRange: 2
   })
 
-  const handleStatusChange = (status: PlayerStatus) => {
+  const handleStatusChange = (status: PlayerStatus) =>
     setStatus(status)
-  }
+
+  const handleRemainingTimeChange = (time: number) =>
+    setRemainingTime(time)
 
   useEffect(() => {
     try {
@@ -38,7 +41,8 @@ const GameContainer = (props: TProps) => {
         },
         onStart: () => {
         },
-        onStatusUpdate: handleStatusChange
+        onStatusUpdate: handleStatusChange,
+        onUpdateTime: handleRemainingTimeChange
       }).startGame()
     } catch (e) {
       console.error(e)
@@ -60,6 +64,7 @@ const GameContainer = (props: TProps) => {
       { renderDeathContainer() }
       <div id={ GAME_CONTAINER }>
         <StatusBar
+          remainingTime={ remainingTime }
           bombRange={ status.bombRange }
           maxBombCount={ status.maxBombCount }
         />

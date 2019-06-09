@@ -12,68 +12,79 @@ import {
 import * as SocketIO from 'socket.io'
 import { Socket } from 'socket.io'
 
+type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
+
 function randomOfList<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)]
 }
 
+function findRandomSlot(state: BackendState): TRandomSlot | undefined {
+  const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2)
+  const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2)
+  const availableSlots: TRandomSlot[] = []
+
+  if (!state.slots.first) {
+    availableSlots.push({
+      slot: 'first',
+      x: centerXOffset,
+      y: centerYOffset
+    })
+  }
+
+  if (!state.slots.second) {
+    availableSlots.push({
+      slot: 'second',
+      x: GameDimensions.gameWidth - centerXOffset,
+      y: centerYOffset
+    })
+  }
+
+  if (!state.slots.third) {
+    availableSlots.push({
+      slot: 'third',
+      x: centerXOffset,
+      y: GameDimensions.gameHeight - centerYOffset
+    })
+  }
+
+  if (!state.slots.fourth) {
+    availableSlots.push({
+      slot: 'fourth',
+      x: GameDimensions.gameWidth - centerXOffset,
+      y: GameDimensions.gameHeight - centerYOffset
+    })
+  }
+
+  if (availableSlots.length >= 1) {
+    return randomOfList(availableSlots)
+  }
+}
+
+
 export function initGameSocketListeners(io: SocketIO.Server) {
   const state: BackendState = {
+    remainingTime: 300,
     slots: {},
     playerRegistry: {},
     destroyedWalls: []
   }
 
-  type TRandomSlot = SimpleCoordinates & { slot: keyof BackendState['slots'] }
-
-  function findRandomSlot(): TRandomSlot | undefined {
-    const centerXOffset = (GameDimensions.tileWidth / 2) - (GameDimensions.playerHeight / 2)
-    const centerYOffset = (GameDimensions.tileHeight / 2) - (GameDimensions.playerWidth / 2)
-    const availableSlots: TRandomSlot[] = []
-
-    if (!state.slots.first) {
-      availableSlots.push({
-        slot: 'first',
-        x: centerXOffset,
-        y: centerYOffset
-      })
-    }
-
-    if (!state.slots.second) {
-      availableSlots.push({
-        slot: 'second',
-        x: GameDimensions.gameWidth - centerXOffset,
-        y: centerYOffset
-      })
-    }
-
-    if (!state.slots.third) {
-      availableSlots.push({
-        slot: 'third',
-        x: centerXOffset,
-        y: GameDimensions.gameHeight - centerYOffset
-      })
-    }
-
-    if (!state.slots.fourth) {
-      availableSlots.push({
-        slot: 'fourth',
-        x: GameDimensions.gameWidth - centerXOffset,
-        y: GameDimensions.gameHeight - centerYOffset
-      })
-    }
-
-    if (availableSlots.length >= 1) {
-      return randomOfList(availableSlots)
-    }
-  }
-
-  setInterval(function () {
+  const updateInterval = setInterval(function () {
     io.sockets.emit(SocketEvents.StateUpdate, state)
   }, SERVER_UPDATE_INTERVAL)
 
+  const timoutInterval = setInterval(function () {
+    state.remainingTime--
+
+    if (state.remainingTime < 1) {
+      updateInterval && clearInterval(updateInterval)
+      timoutInterval && clearInterval(timoutInterval)
+    }
+  }, 1000)
+
   return function (playerId: string, socket: Socket) {
     socket.on('ReadyForEvents', () => {
-      const position = findRandomSlot()
+      const position = findRandomSlot(state)
       if (position) {
         const newPlayer: PlayerRegistry = {
           isDead: false,
