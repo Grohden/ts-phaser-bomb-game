@@ -1,5 +1,6 @@
 import {
   BackendState,
+  GAME_TIME,
   GameDimensions,
   PlayerDirections,
   PlayerRegistry,
@@ -62,7 +63,7 @@ function findRandomSlot(state: BackendState): TRandomSlot | undefined {
 
 export function initGameSocketListeners(io: SocketIO.Server, onEnd: () => void) {
   const state: BackendState = {
-    remainingTime: 300,
+    remainingTime: GAME_TIME,
     slots: {},
     playerRegistry: {},
     destroyedWalls: []

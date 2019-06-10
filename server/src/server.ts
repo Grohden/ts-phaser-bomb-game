@@ -3,6 +3,7 @@ import http from 'http'
 import path from 'path'
 import socketIO, { Socket } from 'socket.io'
 import { initGameSocketListeners } from './game-socket-listeners'
+import { WAIT_SESSION_TIME } from 'commons'
 
 const app = express()
 const server = new http.Server(app)
@@ -43,12 +44,12 @@ type TConItem = {
   socket: Socket
 }
 let playerList: TConItem[] = []
-let timerCount = 10
+let timerCount = WAIT_SESSION_TIME
 let runningGame: ((playerId: string, socket: Socket) => void) | null = null
 
 function setupCountdown() {
   currentTimer && clearInterval(currentTimer)
-  timerCount = 10
+  timerCount = WAIT_SESSION_TIME
 
   currentTimer = setInterval(function () {
     timerCount--
@@ -90,7 +91,7 @@ io.on('connection', function (socket) {
     let isReady = false
 
     socket.on('ReadyForSession', () => {
-      timerCount = 10
+      timerCount = WAIT_SESSION_TIME
       isReady = true
       playerList.push({
         id: playerId,
@@ -112,7 +113,7 @@ io.on('connection', function (socket) {
       } else {
         currentTimer && clearInterval(currentTimer)
 
-        timerCount = 10
+        timerCount = WAIT_SESSION_TIME
         io.sockets.emit('ReadyForSessionCountDown', {
           playerCount: playerList.length,
           timerCount

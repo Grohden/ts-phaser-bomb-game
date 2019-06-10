@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 import { createStyle } from '../lib/ui/utils'
+import { WAIT_SESSION_TIME } from 'commons'
 
 type TProps = {
   socket: SocketIOClient.Socket
@@ -18,7 +19,7 @@ const styles = createStyle({
 const WaitPlayersContainer = (props: TProps) => {
   const [waitState, setWaitState] = useState({
     playerCount: 1,
-    timerCount: 30
+    timerCount: WAIT_SESSION_TIME
   })
 
   useEffect(() => {

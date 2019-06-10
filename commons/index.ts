@@ -1,6 +1,9 @@
 export const SERVER_UPDATE_INTERVAL = 1000 / 60
 export const CLIENT_UPDATE_INTERVAL = 1000 / 60
 
+export const GAME_TIME = 300
+export const WAIT_SESSION_TIME = 30
+
 // TODO: use ramda
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
 
