@@ -36,10 +36,9 @@ interface BombGameConfigs {
   parent: HTMLElement | string
   onDeath: () => unknown
   onStart: () => unknown
-
-  onStatusUpdate(status: PlayerStatus): void
-
-  onUpdateTime(remainingTime: number): void
+  onStatusUpdate: (status: PlayerStatus) => void
+  onUpdateTime: (remainingTime: number) => void
+  onTimeout: () => void
 }
 
 interface SceneMap {
@@ -309,6 +308,10 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       }
     })
 
+    socket.on('Timeout', () => {
+      playerRegistry[playerId].isDead = true
+      gameConfigs.onTimeout()
+    })
     socket.on(SocketEvents.StateUpdate, (backState: BackendState) => {
       gameConfigs.onUpdateTime(backState.remainingTime)
 

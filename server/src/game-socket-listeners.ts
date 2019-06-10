@@ -60,8 +60,7 @@ function findRandomSlot(state: BackendState): TRandomSlot | undefined {
   }
 }
 
-
-export function initGameSocketListeners(io: SocketIO.Server) {
+export function initGameSocketListeners(io: SocketIO.Server, onEnd: () => void) {
   const state: BackendState = {
     remainingTime: 300,
     slots: {},
@@ -79,6 +78,9 @@ export function initGameSocketListeners(io: SocketIO.Server) {
     if (state.remainingTime < 1) {
       updateInterval && clearInterval(updateInterval)
       timoutInterval && clearInterval(timoutInterval)
+
+      io.sockets.emit('Timeout')
+      onEnd()
     }
   }, 1000)
 

@@ -63,7 +63,7 @@ export interface PlayerRegistry {
 }
 
 export interface BackendState {
-  remainingTime: 300,
+  remainingTime: number,
   slots: {
     first?: SimpleCoordinates,
     second?: SimpleCoordinates,

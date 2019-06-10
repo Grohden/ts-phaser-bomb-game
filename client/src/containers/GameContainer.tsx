@@ -17,15 +17,25 @@ const styles = createStyle({
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  deathContainer: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255, 0.7)'
   }
 })
 
+type TFinishType = 'timeout' | 'death'
+
 const GameContainer = (props: TProps) => {
+  const [finishBy, setFinishBy] = useState<null | TFinishType>()
   const [remainingTime, setRemainingTime] = useState(300)
   const [status, setStatus] = useState<PlayerStatus>({
     maxBombCount: 1,
     bombRange: 2
   })
+
+  const handleTimeout = () =>
+    setFinishBy('timeout')
 
   const handleStatusChange = (status: PlayerStatus) =>
     setStatus(status)
@@ -41,6 +51,7 @@ const GameContainer = (props: TProps) => {
         },
         onStart: () => {
         },
+        onTimeout: handleTimeout,
         onStatusUpdate: handleStatusChange,
         onUpdateTime: handleRemainingTimeChange
       }).startGame()
@@ -49,16 +60,30 @@ const GameContainer = (props: TProps) => {
     }
   }, [])
 
-  const renderDeathContainer = () => {
-    return null
+  const getFinishMessage = (type: TFinishType) => {
+    if (type === 'timeout') {
+      return 'Time out!'
+    }
 
-    //   <div className="nes-container">
-    //   <div className="column" style={styles.deathContainer}>
-    //   <div>You died!</div>
-    // </div>
-    // </div>
-
+    if (type === 'death') {
+      return 'You died!'
+    }
   }
+
+  const renderDeathContainer = () => {
+    if (!finishBy) {
+      return null
+    }
+
+    return (
+      <div className="nes-container" style={ styles.deathContainer }>
+        <div className="column">
+          <div>{ getFinishMessage(finishBy) }</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={ styles.container }>
       { renderDeathContainer() }

@@ -63,7 +63,15 @@ function setupCountdown() {
       currentTimer && clearInterval(currentTimer)
 
       if (!runningGame) {
-        runningGame = initGameSocketListeners(io)
+        console.log('Starting a new game')
+
+        runningGame = initGameSocketListeners(io, () => {
+          console.log('Game finished, cleaning vars')
+
+          currentTimer && clearInterval(currentTimer)
+          runningGame = null
+          playerList = []
+        })
       }
 
       playerList.forEach(it => {
