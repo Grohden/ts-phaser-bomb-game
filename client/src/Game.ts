@@ -8,14 +8,14 @@ import {
   SocketEvents,
   TPowerUpInfo,
   TPowerUpType
-} from "commons";
-import Phaser from "phaser";
-import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
-import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from "./alias";
-import { GroupManager } from "./GroupManager";
-import Socket = SocketIOClient.Socket;
+} from 'commons'
+import Phaser from 'phaser'
+import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from './assets'
+import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from './alias'
+import { GroupManager } from './GroupManager'
+import Socket = SocketIOClient.Socket
 
-const debug = true;
+const debug = false
 
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
