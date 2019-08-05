@@ -1,6 +1,6 @@
 # Ts phaser bomb game
 
-This is another university project that i'm being forced to do.
+Another university project that i'm being forced to do.
 
 ## Hey, what's this?
 
