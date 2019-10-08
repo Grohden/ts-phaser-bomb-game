@@ -1,6 +1,7 @@
 node_modules
 server/build/**/*.js
 client/build/**/*.js
+client/build/**/*.html
 commons/**/*.js
 commons/**/*.js.map
 lerna-debug.log
