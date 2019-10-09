@@ -31,12 +31,8 @@ export class GroupManager {
   onPlayerExploded(onCollision: (id: string) => unknown) {
     const { players, explosions } = this;
 
-    this.provider().physics.add.collider(
-      players,
-      explosions,
-      (player) => onCollision(
-        (player as TPlayerGameObject).id!
-      )
+    this.provider().physics.add.collider(players, explosions, player =>
+      onCollision((player as TPlayerGameObject).id!)
     );
 
     return this;
@@ -45,17 +41,13 @@ export class GroupManager {
   onPlayerPowerUpCatch(
     onCollision: (
       player: TPlayerGameObject,
-      powerUp: TPowerUpGameObject,
+      powerUp: TPowerUpGameObject
     ) => unknown
   ) {
     const { players, powerUps } = this;
 
-    this.provider().physics.add.collider(
-      players, powerUps,
-      (player, powerUp) => onCollision(
-        (player as TPlayerGameObject),
-        (powerUp as TPowerUpGameObject)
-      )
+    this.provider().physics.add.collider(players, powerUps, (player, powerUp) =>
+      onCollision(player as TPlayerGameObject, powerUp as TPowerUpGameObject)
     );
 
     return this;
@@ -69,10 +61,7 @@ export class GroupManager {
     return this;
   }
 
-  addPlayer(
-    playerSprite: TPlayerGameObject,
-    id: string
-  ) {
+  addPlayer(playerSprite: TPlayerGameObject, id: string) {
     playerSprite.id = id;
     this.players.add(playerSprite);
   }
@@ -85,10 +74,7 @@ export class GroupManager {
     this.bombs.add(bombSprite);
   }
 
-  addPowerUp(
-    powerUpSprite: TPowerUpGameObject,
-    type: TPowerUpType
-  ) {
+  addPowerUp(powerUpSprite: TPowerUpGameObject, type: TPowerUpType) {
     powerUpSprite.powerUpType = type;
     this.powerUps.add(powerUpSprite);
   }
@@ -112,5 +98,4 @@ export class GroupManager {
       (child as GameSprite).anims.play(key, true);
     }
   }
-
 }

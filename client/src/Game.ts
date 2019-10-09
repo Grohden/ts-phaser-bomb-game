@@ -8,14 +8,20 @@ import {
   SocketEvents,
   TPowerUpInfo,
   TPowerUpType
-} from 'commons'
-import Phaser from 'phaser'
-import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from './assets'
-import { GamePhysicsSprite, GameScene, GameSprite, TPlayerGameObject, TPowerUpGameObject } from './alias'
-import { GroupManager } from './GroupManager'
-import Socket = SocketIOClient.Socket
+} from "commons";
+import Phaser from "phaser";
+import { ANIMATIONS, ASSETS, BOMB_TIME, MAIN_TILES, MAPS } from "./assets";
+import {
+  GamePhysicsSprite,
+  GameScene,
+  GameSprite,
+  TPlayerGameObject,
+  TPowerUpGameObject
+} from "./alias";
+import { GroupManager } from "./GroupManager";
+import Socket = SocketIOClient.Socket;
 
-const debug = false
+const debug = false;
 
 type ExplosionCache = Array<{ sprite: GameSprite; key: string }>;
 type BombMap = {
@@ -57,7 +63,7 @@ function gridUnitToPixel(value: number, baseGridSize: number) {
 }
 
 function makeKey({ x, y }: SimpleCoordinates) {
-  return `${ x }-${ y }`;
+  return `${x}-${y}`;
 }
 
 function findPlayerMapPosition(coords: SimpleCoordinates): SimpleCoordinates {
@@ -85,7 +91,6 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       player: Phaser.Physics.Arcade.Sprite;
     };
   } = {};
-
 
   const makeDefaultTileMap = (key: string, imageName: string): SceneMap => {
     const map = currentScene.make.tilemap({
@@ -154,7 +159,6 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     }
   };
 
-
   const makeMaps = () => {
     // Background
     backgroundMap = makeDefaultTileMap(MAPS.BACKGROUND, MAIN_TILES);
@@ -182,16 +186,16 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
         }
       },
       scene: {
-        preload: function (this: GameScene) {
+        preload: function(this: GameScene) {
           currentScene = this;
           preload();
         },
-        create: function (this: GameScene) {
+        create: function(this: GameScene) {
           currentScene = this;
           create(state);
           gameConfigs.onStart();
         },
-        update: function (this: GameScene) {
+        update: function(this: GameScene) {
           currentScene = this;
           update();
         }
@@ -325,7 +329,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     });
 
     socket.on(
-        SocketEvents.PlayerStatusUpdate,
+      SocketEvents.PlayerStatusUpdate,
       (status: PlayerStatus & { id: string }) => {
         const registry = playerRegistry[status.id];
 
@@ -333,7 +337,7 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
           registry.status = status;
 
           if (status.id === playerId) {
-            gameConfigs.onStatusUpdate(status)
+            gameConfigs.onStatusUpdate(status);
           }
         }
       }
@@ -347,12 +351,9 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
       placePowerUpAt(info);
     });
 
-    socket.on(
-      SocketEvents.WallDestroyed,
-      ({ x, y }: SimpleCoordinates) => {
-        breakableMap.map.removeTileAt(x, y);
-      }
-    );
+    socket.on(SocketEvents.WallDestroyed, ({ x, y }: SimpleCoordinates) => {
+      breakableMap.map.removeTileAt(x, y);
+    });
   };
 
   const create = (state: BackendState & { id: string }) => {
@@ -430,7 +431,12 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     return breakableMap.map.hasTileAt(gridX, gridY);
   };
 
-  const addExplosionSprite = ({ pixX, pixY, gridX, gridY }: {
+  const addExplosionSprite = ({
+    pixX,
+    pixY,
+    gridX,
+    gridY
+  }: {
     pixX: number;
     pixY: number;
     gridX: number;
@@ -455,12 +461,12 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     const { tileWidth, tileHeight } = GameDimensions;
 
     if (hasBombAt({ x: gridX, y: gridY })) {
-      console.log(`Found a bomb at ${ gridX } - ${ gridY }, delegated to it`);
+      console.log(`Found a bomb at ${gridX} - ${gridY}, delegated to it`);
       // Let the next bomb deal with things
       explodeBombAt(gridX, gridY);
       return true;
     } else if (hasExplosionAt({ x: gridX, y: gridY })) {
-      console.log(`Found a explosion at ${ gridX } - ${ gridY }, stopping`);
+      console.log(`Found a explosion at ${gridX} - ${gridY}, stopping`);
       return true;
     } else if (hasAnyWallAt(gridX, gridY)) {
       // No Explosions at walls
@@ -714,5 +720,5 @@ export function BombGame(socket: Socket, gameConfigs: BombGameConfigs) {
     );
   };
 
-  return { startGame }
+  return { startGame };
 }

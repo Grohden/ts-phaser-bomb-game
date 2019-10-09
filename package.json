@@ -7,6 +7,7 @@
   },
   "scripts": {
     "prettier": "prettier --write \"{client, server, commons}/**/*.ts\"",
+    "prettier:check": "prettier --check \"{client, server, commons}/**/*.ts\"",
     "bootstrap": "lerna bootstrap --hoist",
     "build": "lerna run build --stream",
     "fresh": "npm run start:fresh",
